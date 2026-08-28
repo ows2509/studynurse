@@ -1,6 +1,6 @@
 window.STUDYNURSE_CONFIG = {
   version: "0.2.3",
-  supabaseUrl: "",
-  supabaseAnonKey: "",
+  supabaseUrl: "https://dqcwlfeytzslhsqffglp.supabase.co/rest/v1/",
+  supabaseAnonKey: "sb_publishable_Y3I1Cg16aSGMEq9mZ5LCsg_IvBnGbds",
   datasetKey: "main"
 };

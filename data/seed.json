@@ -1,0 +1,1685 @@
+{
+  "version": "0.2.3",
+  "categories": [
+    {
+      "id": "adult-cardio",
+      "main": "Adult",
+      "mainLabel": "Adult",
+      "sub": "Cardio",
+      "subLabel": "Cardio",
+      "title": "🫀Cardiovascular",
+      "subtitle": "Uworld 기반",
+      "order": 0,
+      "cards": [
+        {
+          "id": "adult-cardio-001",
+          "title": "Raynaud",
+          "keywords": [],
+          "bullets": [
+            "<b>혈관경련(vasospasm)으로 일시적 혈류감소</b>",
+            "<b>흰-보-빨</b>(회복시)",
+            "<b>Cz: </b>cold, stress (yoga굿)",
+            "<b>Nx:</b> 따뜻하게 (옷,장갑,물), 혈관수축피하기(담배,커피)",
+            "<b>Tx: </b>CCB(혈관확장유도)"
+          ],
+          "vocab": [
+            "immerse - 담그다",
+            "refrain from ~ing - 자제하다"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "5/13 · 5/12 · 4/29",
+              "title": "A-fib EKG → 중재 (약물 선지 없음)",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "Synchronized Cardioversion, prapran<b>olol</b>"
+                },
+                {
+                  "status": "X",
+                  "content": "Defibrillation (=unsynchronized cardioversion)"
+                }
+              ]
+            }
+          ],
+          "order": 0,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-002",
+          "title": "Heart failure (HF)",
+          "keywords": [],
+          "bullets": [
+            "<b><font color=\"#ff3385\">Lt</font></b> . HF (<font color=\"#ff3385\"><b>L</b></font>ung) : crackles(청진시), frothy, blood tinged(pink) sputum, tachypnea, restless (d/t hypoxemia)",
+            ">>>><u>ascultation of lung </u>먼저 (ABC원칙)",
+            "<font color=\"#6e4727\"><b>Rt</b></font>. HF : JVD(jugular vein distension; 30-40도), 말초부종, 복부둘레증가, 복부압력증가, 위장관순환감소로 메스꺼움, 식욕부진, 운동시 호흡곤란",
+            "⛔ NSAIDs - Na저류 → 체액 저류<br/>⭕ 매일 몸무게 측정",
+            "💡새로운 하지부종이 생겼다? HF 일수도"
+          ],
+          "vocab": [
+            "exacerbation - 악화",
+            "rhonchi - 수포음",
+            "dry mucous -건조한 점막(=탈수)<div>-<span style=\"font-size: 0.82rem;\">skin tenting - 피부탄력저하</span></div><div>-flat neck, hand veins<span style=\"font-size: 0.82rem;\"></span></div>"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "Uworld",
+              "title": "<br/>",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "Synchronized Cardioversion, prapran<b>olol</b>"
+                }
+              ]
+            },
+            {
+              "date": "날짜",
+              "title": "새 기출 주제 입력",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 1,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-003",
+          "title": "MI",
+          "keywords": [],
+          "bullets": [
+            "<b>Sx: </b>dizz, sweating, clammy skin, shortness of breath, n/v, neck/jaw/Lt. shoulder/arms radiating pain, epgastrium, ischemic chest pain",
+            "<b>※ 여성, 노인, DM</b><br/>- 흉통, 좌측팔 방사통 증상 아닐 수도→ <b>nausea, diaphoress, dizz, fatigue, epigastric pain</b>(상복부통증)",
+            "<b> troponin:</b> CK(-MB)보다 심근손상민감도↑",
+            "<b>MI약</b><div>Aspirin(혈전예방), Atova<u>statin</u>(동맥경화↓; 근육통모니터), Docusate sodium(변완화제; 심장부담<span style=\"font-size: 0.95rem;\">↓), Lisino<u>pril</u> (ACE-i; 심부전진행예방; K, BP 모니터)</span></div>",
+            "<font color=\"#ff3385\">부정맥</font> 위험 (가장흔한합병증) -<b><font color=\"#ff3385\">cardic monitor 붙이기!</font></b> (v/s보다 먼저)"
+          ],
+          "vocab": [
+            "diaphoresis - 발한",
+            "a basic metabolic panel - 기본대사검사"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 2,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-004",
+          "title": "DVT",
+          "keywords": [],
+          "bullets": [
+            "DVT → <b>PE (pulmonary embolism) </b>위험",
+            "⛔마사지,압박 금지",
+            "⭕apply warm compress -inflammation",
+            "<b>Risk factor </b>: <span style=\"font-size: 0.95rem;\">trauma, surgery, prolonged immobility, oral contraceptives, <u>pregnancy</u>, <u>estrogen</u>(혈액응고항진)<u>,</u> varicose veins, obesity, smoking, advanced age, <u>PICC(?)</u></span>",
+            "<b>Sx : </b>unilateral edema(한쪽다리부종), localized pain(ex. 국소통증-종아리), tenderness to touch, warmth/erythema",
+            "DVT재발교육: 탈수주의(혈전위험↑), elevate legs ont a foot stool when sitting, dorsiflex the feet often(발목을 자주 젖히세요)"
+          ],
+          "vocab": [
+            "erythema -발적",
+            "ectopic beats - 이소성 박동"
+          ],
+          "translations": [
+            "is due to recieved a scheduled dose of wafarin now. (지금 예정된 와파린 용량을 투여받을 거다)"
+          ],
+          "images": [],
+          "qbank": [
+            {
+              "date": "Uworld",
+              "title": "3일전 MI, tenderness, warmth Lt. calf. (DVT의심)",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "lower ext 사정 - neurovascular assessment"
+                }
+              ]
+            },
+            {
+              "date": "날짜",
+              "title": "새 기출 주제 입력",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 3,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-005",
+          "title": "Shock, 수혈S/E",
+          "keywords": [],
+          "bullets": [
+            "<b style=\"\"><font color=\"#6e4727\">Septic shock</font></b> (대사성산증) → K↑ → Cardiac dysrhythmias",
+            "<b><font color=\"#6e4727\">Hypovolemic shock</font></b> (저혈량성)<div>- 낮은 동맥압 (mean arterial pressure: 정상 60-65)</div><div>- narrowed pulse pressure(맥압)</div><div>- <font color=\"#ff3385\" style=\"\">N/S hyd </font>&gt;&gt;&gt;&gt;&gt; 회복시 capillary refill time 돌아옴(말초혈류공급)</div>",
+            "<font color=\"#6e4727\"><b>Cardiogenic shock</b></font> - Tx) dopamine<div>&gt;&gt;&gt;심장수축력, 심박출량 ↑ &gt;&gt; 심계항진, 고혈압, 빈맥 </div>",
+            "<font color=\"#6e4727\"><b>Neurogenic shock</b></font> <div>- traumatic brain injuries, spinal cord injuries above T5</div><div>- skin pink dry (붉고 건조한 피부), 저혈압, 서맥</div>",
+            "<font color=\"#ff3385\"><b>❤️수혈 S/E :</b> </font>anxiety, 저혈압, 빈맥"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 4,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-006",
+          "title": "24hr holter monitor",
+          "keywords": [],
+          "bullets": [
+            "평소활동 그대로",
+            "목욕, 샤워 금지",
+            "keep a diary of activities, symptom experienced."
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 5,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-007",
+          "title": "Arterial fibrillation (A.fib)",
+          "keywords": [],
+          "bullets": [
+            "<font color=\"#ff3385\"><b>P파 X</b></font>, 대신 세동파",
+            "심박출량감소 → 심방혈전형성 → <font color=\"#111827\">심</font><b style=\"\"><font color=\"#ff3385\">방</font></b><font color=\"#111827\">수축기능상실</font>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 6,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-008",
+          "title": "Infective endocarditis (IE) (심내막염)",
+          "keywords": [],
+          "bullets": [
+            "<b><font color=\"#ff3385\">IE → PE</font></b> (pul. embolism), stroke",
+            "pain, pallor in one foot",
+            "splinter hemorrhages in the nail beds"
+          ],
+          "vocab": [
+            "pallor - 창백"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 7,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-009",
+          "title": "Cardio시술/수술 전후 간호",
+          "keywords": [],
+          "bullets": [
+            "CAG(Coronary angioplasty)+ Stent placement <div>CABG(Coronary artery bypass grafting surgery)</div>",
+            "<font color=\"#cc0052\"><b>CABG</b></font><div><b>-수술전: </b>항혈전제 5-7일전 stop (prasugrel,c lopidogrel, ticagrelor, dipyridamole)<br/><div><b>-수술후: </b></div><div>· SEX는 <span style=\"font-size: 0.95rem;\">계단 두층 오를 수 있을 때 가능</span></div><div>· 절개부위를 물에 담그거나 로션X (cf. PAD는 로션👍🏻)</div></div><div><span style=\"font-size: 0.95rem;\">·</span><span style=\"font-size: 0.95rem;\"> </span><span style=\"font-size: 0.95rem;\">Chest tube 100 → 20 (흉관막히면, 심장내 체액축적, 수축력저하 →</span><b style=\"font-size: 0.95rem;\">심장압전</b><span style=\"font-size: 0.95rem;\">) </span><font color=\"#ff3385\" style=\"font-size: 0.95rem;\">🩺청진   </font><font color=\"#111827\" style=\"font-size: 0.95rem;\">⛔strip,milking 금지</font></div>"
+          ],
+          "vocab": [
+            "rehabillation - 재활"
+          ],
+          "translations": [
+            "climb two flights of stairs without symptoms (계단 두층 오를 수 있을 때 가능)",
+            "· position the tubing with dependent loop (튜브에 loop(u자구간)이 생기도록 하라)<br/><div><span style=\"font-size: 0.82rem;\">·</span><span style=\"font-size: 0.82rem;\"> </span>keep free o dependent loop and kinks (튜브에 쳐지는 구간(u자구간)과 꼬임(kinks)가 없도록하라 = 중력에 의해 원활하게 유지하라는 맞는설명</div>"
+          ],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 8,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-010",
+          "title": "Sinus bradycardia",
+          "keywords": [],
+          "bullets": [
+            "PR(맥박) = 300 / 6(R과 R사이 큰 칸 갯수)"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 9,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-011",
+          "title": "Aortic valve surgery care",
+          "keywords": [],
+          "bullets": [
+            "<b><font color=\"#ff3385\">Chest tube 100cc/hr 이상 </font></b>노티"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 10,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-012",
+          "title": "Ventricular tachycardia",
+          "keywords": [],
+          "bullets": [
+            "P = QRS에 가려짐 .",
+            "<b style=\"color: rgb(110, 71, 39);\">QRS</b><font color=\"#111827\">(심실)</font><b style=\"color: rgb(110, 71, 39);\">가 쥰나빨라서 P가 가려짐.</b>",
+            "<b>Sx: </b>dizz, diaphoresis (발한)",
+            "<b><font color=\"#ff3385\">맥박이 있는지 없는지 사정</font></b><div><font color=\"#ff3385\" style=\"font-weight: bold;\">&gt; </font><font color=\"#111827\" style=\"font-weight: bold;\">Pulse</font><font color=\"#ff3385\" style=\"font-weight: bold;\">less</font><font color=\"#111827\" style=\"font-weight: bold;\"> V tach:</font><font color=\"#ff3385\" style=\"font-weight: bold;\"> </font><font color=\"#111827\" style=\"\">CPR, D.fib </font></div><div><b style=\"color: rgb(255, 51, 133);\">    </b><b style=\"\"><font color=\"#111827\">Pulse </font><font color=\"#ff3385\">O</font><font color=\"#111827\">, V-tach: </font></b><font color=\"#111827\">항부정맥제 (Amiodarone, Procainamide, Sotalol)</font></div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 11,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-013",
+          "title": "Implantable Cardioverter Defibrillator (ICD)",
+          "keywords": [],
+          "bullets": [
+            "ICD간호<div>-ICD작동 모니터, (작동후) 부정맥 해소여부, 혈액학적 불안정징후 사정(저혈압,흉통,의식변화), ICD방전여부 모니터</div>",
+            "ICD 부정맥 해결X, 반복적 충격 → 수동 외부 제세동기 확보",
+            "<b>ICD교육</b><div>-작동시 통증있다 설명, <span style=\"font-size: 0.95rem;\">운전가능, 비행기가능 (스캔⛔), </span><span style=\"font-size: 0.95rem;\">의료진허가까지 ICD 삽입팔을 어깨위로 올리지 않도록 </span></div>"
+          ],
+          "vocab": [
+            "look into - 알아보다"
+          ],
+          "translations": [
+            "I'm not worried about the device firing now bcz I know it won't hurt. (기기가 작동해도 아프지 않을거란걸 알아요)",
+            "The ICD fires multiple times without successfully stopping the VT cuasing the client to become confused and difficult to rouse (ICD가 여러차례 작동했지만, 심장빈맥을 멈추지 못했고, 환자는 혼란스러워 깨기 어려워함)"
+          ],
+          "images": [],
+          "qbank": [
+            {
+              "date": "Uworld",
+              "title": "ICD has deliverd 2 shocks, bt no pulse (간호사 다음중재)",
+              "items": [
+                {
+                  "status": "X",
+                  "content": "IV epi (CPR 후에도 pulse없으면), deactivate ICD with magnet (비활성화하는건 방해됨)"
+                },
+                {
+                  "status": "O",
+                  "content": "Initiate chest compression"
+                }
+              ]
+            },
+            {
+              "date": "날짜",
+              "title": "새 기출 주제 입력",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 12,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-014",
+          "title": "Cardiac tamponade (심장압전)",
+          "keywords": [],
+          "bullets": [
+            "<font color=\"#111827\" style=\"\">pericardial</font> effusion(심낭삼출) → 심장압전",
+            "<b><font color=\"#cc0052\">pericardial</font><font color=\"#ff3385\"> effusion :</font></b><div>pericardium에 fluid고임 → ♡에 fluid build up <span style=\"font-size: 0.95rem;\">→ prevent from pumping</span></div>",
+            ">>> Tx: pericardiocentesis",
+            "distant/muffled heart tones, jugular venous distension, pulsus paradoxus (기이맥), hypotension with narrowed pulse pressure, dyspnea, tachypnea",
+            "<br/>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 13,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-015",
+          "title": "Serum level / test",
+          "keywords": [],
+          "bullets": [
+            "BNP는 Na 배설유도",
+            "pinprick test (바늘로 찌르는 검사, 감각평가) -주로 당뇨병<div>&gt;&gt;반응이 없으면 말초신경병증</div>",
+            "K↑, tall peaked T waves = calcium gluconate 주기"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 14,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-016",
+          "title": "Premature Ventricular Contraction (PVC) 심실조기수축",
+          "keywords": [],
+          "bullets": [
+            "넓은 QRS",
+            "<b>Cz: </b>카페인, 디곡신, K불균형"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 15,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-017",
+          "title": "P<font color=\"#111827\" style=\"\">A</font>D",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<font color=\"#ff3385\">동</font>맥질환 = <font color=\"#ff3385\">댕</font>글 (dangle시 완화)",
+            "intermittent claudication<b><font color=\"#ff3385\"> (걸을때 통증)</font></b>",
+            "dry skin, scaly skin, thin, shiny, taut, hair loss",
+            "dry and round, well-demarcated border, punched out(구멍뚫린), toes에 잘생김 (<b>앗</b>토..)",
+            "<b>Nx: </b>posterior tibial and dorsalis pedis",
+            "👍🏻로션(피부손상예방), 적절한 운동<div>⛔use heating pad to promote circulation (화상위험)</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 16,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-018",
+          "title": "P<font color=\"#111827\">V</font>D",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<b><font color=\"#ff3385\">reddish-brown</font></b> hyperpigmentation over the <b>m</b>edial <b>m</b>alleolus (적갈색 피부색소침착: 다리에 피가 고이면서 혈관박 적혈구, 철분 나옴, 철분이 적갈색으로 착색)",
+            "diffuse and boggy with irregular borders"
+          ],
+          "vocab": [
+            "over the course of the day -하루동안",
+            "boggy - 부어있고 물컹거리는"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 17,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-019",
+          "title": "Defibrilation (D.fib)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "Sedation: <div>- 의식없는 환자 제세동시 X, </div><div>- 불안감 완화, 통증 줄이기 위해</div><div>- elective synchronized cardioversion 시 쓰기도</div>",
+            "CPR후 제세동기 받았지만 전기충격권장되지 않음 → 즉시 compression! (CAB)"
+          ],
+          "vocab": [],
+          "translations": [
+            "Call out and look around ensure that staff are all clear. (소리쳐 부르고 직원들이 안전한지 확인해라) = D.fib전 \"모두 물러나세요!\" 그거",
+            "starts 2min of CPR - 2분간 CPR",
+            "N recieves and attaches an automated external D.fib, but no shock is advised. (제세동기 받았지만 전기충격 권장되지 않음)"
+          ],
+          "images": [
+            "assets/images/embedded_001.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 18,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-020",
+          "title": "청진",
+          "keywords": [],
+          "bullets": [
+            "Aortic = 2R(Rt.)<div>Pulmonic = 2L</div><div>Tricuspid = 4-5L</div><div>Mitral = 5L</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_002.jpg"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 19,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-021",
+          "title": "B-blocker / B-agonist",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<font color=\"#ff3385\"><b>B-blocker</b></font> (metopr<b>olol</b>): HR ↓, BP ↓",
+            "<b style=\"\"><font color=\"#6e4727\">B-agonist</font></b> (Albuterol): 기도확장(기관지확장제), HR↑"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 20,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-022",
+          "title": "Orthostatic BP",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "누운 → 앉은 → 선",
+            "SBP 20이상 감소, DBP 20이상 감소",
+            "자세변경 후 1-3분 간격 f/u",
+            "서있을때 어지러우면, 다시 <u>앉도록</u>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 21,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-023",
+          "title": "Cardiac catheterization (femoral/radial)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "당일 퇴원 (cf. angioplasty, stent placement만 입원)",
+            "대퇴동맥으로 관상동맥까지 삽입<div>-position : 30도이하 앙와위(flat)<div>-<u>고관절 굴곡</u> 방지</div></div>",
+            "palpating pedal pulses, assessing capillary refill, temperature >> tissue necrosis 사정",
+            "<b><font color=\"#ff3385\">조영제</font></b>사용: lactic acidosis(metformin), contrast-induced nephropathy(조영제유발 신병증)"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "Uworld",
+              "title": "Cardiac catheterization 1hr전, pressure dressing is saturated with blood and leaking (피로 흠뻑), 간호사 중재 1st?",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "compression 먼저"
+                },
+                {
+                  "status": "X",
+                  "content": "HCP노티, 새로드레싱, 말초맥박사정 - compression한 한다음에!"
+                }
+              ]
+            },
+            {
+              "date": "날짜",
+              "title": "새 기출 주제 입력",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 22,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-024",
+          "title": "Heart valve replacement (기계식판막치환술)",
+          "keywords": [],
+          "bullets": [
+            "more durable (내구성 좋음) <div>&gt;&gt;와파린 평생 → thromboembolism ↑</div>",
+            "⛔Ginkgo biloba(은행잎추출물) (혈액응고잘안됨)<div>⛔Aspirin, NSAIDs (출혈위험)<br/><div>⛔increase green leafy vegetables</div></div><div>&gt;<font color=\"#ff3385\"> INR변동 피하기 위해 꾸준한 양 먹어야함</font></div>",
+            "<u>prophylactic ABx (예방적 항생제)</u>-감염병심내막염(IE)위험"
+          ],
+          "vocab": [
+            "prophylactic 예방적"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "Uworld",
+              "title": "prophylactic ABx prior to dental procedures (예방적항생제-보기 선지가 심장질환이면, '감염'질환 = IE)",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "Prosthetic material in heart valve, unrepaired cyanotic congenital heart defect (교정되지 않는 청색증성 선청성 심장기형)"
+                },
+                {
+                  "status": "X",
+                  "content": "large anterior wall MI with subsequent HF, mitral valvloplasty repair, mitral valve prolapse with regurgitation"
+                }
+              ]
+            },
+            {
+              "date": "날짜",
+              "title": "새 기출 주제 입력",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 23,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-025",
+          "title": "Hypertiensive Crisis (고혈압위기)",
+          "keywords": [],
+          "bullets": [
+            "<font color=\"#ff3385\"><b>SBP 180 또는 DBP 120 이상</b></font><div>&gt;&gt;천천히 낮춰야함</div>",
+            "평균동맥압(MAP) 25%이상 낮추지 않도록 110-150mmHg유지 (MAP= (SBP+ 2DBP)/3)",
+            "뇌졸중, 신장부전, 심부전 가능",
+            "Tx: <b><font color=\"#ff3385\"><u>Nitroprusside</u></font></b> IV (혈관확장제) - 저혈압증상주의 (pale, cool, clammy skin, light-headed(어지럼증), <u>Labetalol, Nicardipine</u>",
+            "<font color=\"#ff3385\">OTC 감기약</font>-<span style=\"font-size: 0.95rem;\">교감신경흥분제 계열의 </span><font color=\"#ff3385\" style=\"font-size: 0.95rem;\">코막힘 완화제</font><span style=\"font-size: 0.95rem;\"> (phenylephrine, pseudoephedrine): BP ↑, 심근수축력 ↑, 심계항진, 빈맥</span>",
+            "<b>**DASH (dietary approaches to stop) 식단</b><div>- 나트륨,설탕,콜레스테롤, 트랜스/포화지방 줄이기</div><div>- red meat 대신 다른거, 무지방/저지방 우유, 과일/채소/통곡물/생선</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 24,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-026",
+          "title": "Allen test",
+          "keywords": [],
+          "bullets": [
+            "ABGA전 the patency of the ulnar artery<div>- <u>척골동맥</u> 통해 손바닥 색 돌아오는 시간 측정</div><div>- <u>양성(pos)</u> : 7-10초 내 잘 돌아오면,</div><div>요골동맥 이용 검체 채취 가능</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 25,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-027",
+          "title": "Open abdomen aortic aneurysm (repair)",
+          "keywords": [],
+          "bullets": [
+            "=개복동맥류 수술",
+            "수술 후 dorsal pedis and posterior tibial pulse사정<div>(absent pulse/mottled extremities)</div>",
+            "저혈압, 탁수,<u> 수술 중 대동맥 장시간 차단</u>, 출혈 또는 색전증 → <u><font color=\"#ff3385\">신장</font>관류 감소</u> → 신장손상  (신장동맥 아래 80% AAA)",
+            "<b><font color=\"#ff3385\">AAA graft leakage </font></b>증상<div>-ecchymosis of groin/penis/scrotum/perineum</div><div>-increased abd.girth</div><div>-weak/absent peripheral pulses</div><div>-pelvis, back, groin pain ↑</div><div>-U/O 감소</div>",
+            "endovascular형식: 복부절개X, chest tube X, 서혜부 천자부위, 말초맥박, 소변량 모니터"
+          ],
+          "vocab": [
+            "groin - 사타구니"
+          ],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_003.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 26,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-028",
+          "title": "Arterial continuos invasive monitor",
+          "keywords": [],
+          "bullets": [
+            "Low alarm = check <font color=\"#ff3385\">bleeding </font>at the connection site",
+            "level the transducer at the phlebostatic axis, <span style=\"font-size: 0.95rem;\">zero the monitor, square wave test (시스템 제대로 작동하는지 파악)</span><div>※ <b>phlebostatic axis: </b>4th intercostal space, midaxillary line 만나는 곳</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_004.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 27,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-029",
+          "title": "Angina pectoris",
+          "keywords": [],
+          "bullets": [
+            "협심증 = 심근허혈 (심장근육으로의 혈류 감소)",
+            "<b>Cz: </b>심장근육 <u>산소요구량 증가시키는</u> 모든 요인<div> - 운동,SEX,불안/공포, 추위노출(저체온증,혈관수축),담배, 각성제(심박수↑),관상동맥협착</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 28,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-030",
+          "title": "CABG (coronary artery bypass graft)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<font color=\"#6e4727\"><b>Traditional CABG</b></font><div><font color=\"#ff3385\"><b>MIDCAB</b></font> (갈비뼈 사이 흉곽 절개 = <u>더아픔!</u>)</div>",
+            "using <u>great saphenous vein(대복재정맥)</u> 에서 건강한 혈관 채취 → 막힌 관상동맥 우회하여 심근혈류 재분배<div>· wash inscisions in the shower gently pat dry (open wound)</div>"
+          ],
+          "vocab": [
+            "pat dry - 가볍게 두들겨 말리다"
+          ],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_005.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 29,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-031",
+          "title": "Pericarditis (심낭염)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "Pericard<b>itis</b> : virus infection",
+            "<b>Sx: </b>sharp chest pain, pericardial friction rub(심낭마찰음)",
+            "inspiration, coughing 시 통증 <font color=\"#ff3385\">▲</font><div>sitting up, leaning forward 시 통증 <font color=\"#6e4727\">▼</font></div>",
+            "<b>Tx: </b>NSAIDs, aspirin"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 30,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-032",
+          "title": "ETC (1)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "palpate bilateral carotid a. simultaneously to assess for symmetry(대칭성) - 양측 경동맥 동시촉지 금지<div>; 미주신경자극으로 인한 서맥, 실신 위험</div>",
+            "PMI(point of maximal impulse; 최대박동점) -supine/45도 침대올려 4-5th 늑간",
+            "post) cardiac transplant 간호 - infection주의 <div>-이식후감염-  (Sx: productive/dry cough) -면역억제제 평생</div>",
+            "Sinus tachy cardia (P↑): B차단제,CCB,adenosine"
+          ],
+          "vocab": [
+            "productive cough - 가래가 동반되는 기침<div>dry cough -마른기침 (반대말)</div>"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 31,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-033",
+          "title": "Mitral valve prolapse (MVP) 승모판 탈출증",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "MVP → Mitral regurgitation(승모판 역류증) 될 수도",
+            "<b>Sx: </b>무증상 또는 부정맥(palpitation, dizz, syncope)",
+            "⭕유산소가능, <div>⛔OTC decongestants(코막힘완화제)-에피네프린함유 (부정맥 위험)</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 32,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-034",
+          "title": "Supraventricular tachycardia(SVT)",
+          "keywords": [],
+          "bullets": [
+            "혈액학적으로 안정적 : 미주신경자극술-Adenosin-B차단제/CCB<div>혈액학적으로 <font color=\"#ff3385\" style=\"\">불</font>안정적: cardioversion 먼저</div>",
+            "※ <b><font color=\"#ff3385\">cardioversion</font></b>시<div>- synchronize button must be activated prior to delivering the shock. (심장리듬 감지하여 T파동안 전기충격 가하는걸 방지)<div>- 금속장신구,의치,금속물체(<u>O2 tank</u>), 의료진은 환자나 침대에 닿지 않도록</div><div><div>※ <font color=\"#6e4727\"><b>Synchronized</b></font> cardioversion: A.fib/A.flutter/VT,PSVT</div></div></div>",
+            "<b><font color=\"#ff3385\">Paroxymal supraventricular tachycardia(PSVT) 발작성 상심실성 빈맥 </font></b><div>- P 150회/분</div><div>- <b>Tx: </b>vagal maneuvers (valsalva, coughing, carotid massage), IV adenosin, 효과없으면 synchronized cardioversion</div>"
+          ],
+          "vocab": [
+            "hemodynamically - 혈액학적으로"
+          ],
+          "translations": [
+            "bear down as if having a bowel movement (마치 배변하는 것처럼 힘주도록)"
+          ],
+          "images": [
+            "assets/images/embedded_006.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 33,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-035",
+          "title": "Torsades de pointes (토르사드 드 포인트)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<b><font color=\"#ff3385\">저마그네슘혈증</font></b>",
+            "irregular R-R intervals, QT 연장<div>&gt;&gt;<font color=\"#ff3385\">심실세동 </font>갈 수도 있음.</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_007.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 34,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-036",
+          "title": "Permanent pacemaker",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "정상: P파, QRS복합체 전에 spike",
+            "symptomatic bradycardia(증상있는 서맥)/방실블록에 적용",
+            "심박조율기 위해 폰 두지 말기<div>폰 통화시, 조율기 반대쪽 귀로</div><div>공항-검사봉X, 매장 도난방지장치 가까이X,</div><div>(의사승인까지) 심박조율기 팔 어깨위로 X</div><div>소형가전은 괜찮</div>",
+            "<b>failue to capture</b><div>-  원인: 전극선 이탈, 배터리 방전 등</div><div>- pacemaker is firing but myocardium is not responding</div><div>- 혈액학적 불안정(저혈압, 어지럼증)시, transcutaneous pacing (영구 심박동기 고칠때까지)</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [
+            "assets/images/embedded_008.png"
+          ],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 35,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-037",
+          "title": "Aortic dissection (대동맥박리)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "대동맥 내막에 파열 → 혈액이 동맥벽 사이로 역류 → <b>심장 압전 </b>위험",
+            "<b>Tx: </b>B-blocker(-lol) <b><font color=\"#ff3385\">1st.</font></b> , 유치도뇨관(소변량모니터), opoid 진통제"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 36,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-038",
+          "title": "IVC filter insertion (femoral)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "하지혈관 혈전 걸러내서 폐색전증(PE)예방",
+            "☎️하지혈액순환 장애증상(통증,저림), 허리통증 유발하는 출혈, PE증상(chest pain, 호흡곤란) 시 보고!"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 37,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-039",
+          "title": "Coronary artery disease medication",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<b>⛔NSAIDs </b>(naproxen, ibuprofen)",
+            "<b>Isosorbide di</b><b style=\"text-decoration-line: underline;\">nitrate </b>(Isordil) 말초혈관 확장, 관상동맥확장",
+            "<b>Atova<u>statin</u> </b>(Lipitor) 콜레스테롤약 (CAD도움)",
+            "Fishoil (omega3): 혈중 중성지방 ↓"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 38,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-040",
+          "title": "방실블록, 방실차단 block",
+          "keywords": [
+            "키워드1",
+            "키워드"
+          ],
+          "bullets": [
+            "<b><font color=\"#cc0052\">2도 방실차단 1형:</font><font color=\"#6e4727\"> </font></b>PR간격 점점길어지다 QRS파 소실<div>&gt; 저혈압, 어지럼증, 호흡곤란 사정 </div><div>   - 증상 O : Atropine, 임시 pacemaker, 증상 X : obs</div>",
+            "<font color=\"#cc0052\"><b style=\"\">3도 방실차단 (완전심장차단):</b> </font>전기전도 경로가 차단 → 심박출량 감소 → 심방, 심실 수축분리<div>&gt;&gt; cardiologist연락 -temporary pacing준비</div>",
+            "<b>Radiofrequency catheter ablation(고주파카테터절제술)- </b>SVC, VT 방실결절 근처 시술은 전도를 손상시켜 다양하 방실차단 유발"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 39,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-041",
+          "title": "Air embolism",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "CVC(central venous catheter) is dislodged",
+            "<b>Sx:</b> cyanotic, diaphoretic, tachypneic",
+            "<b>Tx:</b> 밀폐드레싱, 산소, <font color=\"#ff3385\"><u>좌측 트렌델렌버그체위</u></font>, 노티"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 40,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-042",
+          "title": "새 주제",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "개념 내용 입력"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 41,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-043",
+          "title": "새 주제",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "개념 내용 입력"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 42,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-044",
+          "title": "새 주제",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "개념 내용 입력"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 43,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-045",
+          "title": "새 주제",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "개념 내용 입력"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 44,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-cardio-046",
+          "title": "새 주제",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "개념 내용 입력"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 45,
+          "updatedAt": null
+        }
+      ]
+    },
+    {
+      "id": "adult-gastro",
+      "main": "Adult",
+      "mainLabel": "Adult",
+      "sub": "Gastro",
+      "subLabel": "Urinary",
+      "title": "🚿 Urinary/Renal",
+      "subtitle": "Uworld 기반",
+      "order": 1,
+      "cards": [
+        {
+          "id": "adult-gastro-001",
+          "title": "1. Gastro 기본 개념",
+          "keywords": [],
+          "bullets": [
+            "Gastro 관련 핵심 개념 내용을 입력하세요."
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "Gastro 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 0,
+          "updatedAt": null
+        }
+      ]
+    },
+    {
+      "id": "adult-emergency",
+      "main": "Adult",
+      "mainLabel": "Adult",
+      "sub": "Emergency",
+      "subLabel": "Emergency",
+      "title": "☎️ Emergency",
+      "subtitle": "Uworld 기반",
+      "order": 2,
+      "cards": [
+        {
+          "id": "adult-emergency-001",
+          "title": "Hypovolemic shock",
+          "keywords": [],
+          "bullets": [
+            "추가적 체액 손실을 막고, 체액량 회복",
+            "<b>Tx:</b> N/S hyd, Noredinephrine(천천히감량), Dopamine<div>(cf. half/s = 고삼투성 탈수환자에게(과도한발한))</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "Emergency 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 0,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-emergency-002",
+          "title": "ETC",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "terrorism (chemical agent, visible chemical residue)<div>&gt;&gt; <font color=\"#ff3385\">1st. 오염제거</font>  (이후에 사정, 계획수립 등)</div>",
+            "박힌 물체: 만지거나 제거X, 물체가 움직이지 않도록 고정 (stabilize the sissors with sterile bulky Dx)",
+            "1-12m: 맥박 100-160, 호흡 30-60 정상",
+            "개념 내용을 입력하세요"
+          ],
+          "vocab": [],
+          "translations": [
+            "pt at industrial accident scene who was impaled int eh abdomen by a pair or sissors. (가위에 복부를 찔림)"
+          ],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 1,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-emergency-003",
+          "title": "DIC (disseminated intravascular coagulation)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "✨life-threatening",
+            "응고인자,혈소판 과다소모 → 비정상적 혈전,출혈<div><b>Risk factor: </b>패혈증, 외상, 태반조기박리, 전자간증</div><div><b>Sx: </b>IV천자부위출혈, 점상출혈, 반상출혈, 혈뇨, 토혈, 혈변, 폐출혈 </div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 2,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-emergency-004",
+          "title": "Frostbite (동상)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "<b>Sx: </b>fingers and toes numbness, mottled skin(얼룩덜룩)",
+            "<b>Tx: </b>압박,마사지,squeeze금지(손상된조직 더쉽게손상), 37-39도 데운물에 환부 담그기, <u>두꺼운옷X</u>(조직괴사방지), 재가온(rewarming)시 통증있음-진통제, 재가온 후 elevation(부종↓),달라붙지 않는멸균드레싱, 구획징후군 관찰"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 3,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-emergency-005",
+          "title": "Hypothermia (저체온증)",
+          "keywords": [],
+          "bullets": [
+            "부정맥위험 (esp.심실세동) >> cardiac monitor"
+          ],
+          "vocab": [
+            "draw blood - 채혈하다"
+          ],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 4,
+          "updatedAt": null
+        },
+        {
+          "id": "adult-emergency-006",
+          "title": "Rapid response team (신속대응팀)",
+          "keywords": [
+            "키워드1"
+          ],
+          "bullets": [
+            "SBP < 90, PR <40 / >130, RR<8 / >28, 산소공급에도 SpO2 90미만, 소변량 <50cc/4hr, 의식수준",
+            "❎근무내내 GCS 9점 (비정상범위로 안정)<div>❎post operative pain 10점</div>"
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "관련 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 5,
+          "updatedAt": null
+        }
+      ]
+    },
+    {
+      "id": "adult-endo",
+      "main": "Adult",
+      "mainLabel": "Adult",
+      "sub": "Endo",
+      "subLabel": "Endo",
+      "title": "🎀 Endo 필기노트",
+      "subtitle": "원문 보존 · 개념, 단어 & 문장 해석 노트",
+      "order": 3,
+      "cards": [
+        {
+          "id": "adult-endo-001",
+          "title": "1. Endo 기본 개념",
+          "keywords": [],
+          "bullets": [
+            "Endo 관련 핵심 개념 내용을 입력하세요."
+          ],
+          "vocab": [],
+          "translations": [],
+          "images": [],
+          "qbank": [
+            {
+              "date": "날짜",
+              "title": "${subName} 기출 주제",
+              "items": [
+                {
+                  "status": "O",
+                  "content": "기출 내용 입력"
+                }
+              ]
+            }
+          ],
+          "order": 0,
+          "updatedAt": null
+        }
+      ]
+    }
+  ]
+}

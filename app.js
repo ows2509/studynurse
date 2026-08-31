@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.4.2';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -294,6 +294,7 @@ async function createRevisionSnapshot(reason){
 
 async function persistData(showAlert=true){
   collectEditable();
+  state.categories.forEach(cat=>cat.cards.forEach(collectVocabularyFromBlocks));
   state = migrateState(state);
   setSaveState('saving','저장 중...');
 
@@ -359,7 +360,7 @@ function collectEditable(){
 
     if (field === 'block') {
       const block = findBlock(card, el.dataset.block);
-      if (block) block.content = sanitizeRich(el.innerHTML);
+      if (block) block.content = sanitizeRich(autoBoldAbbreviations(el.innerHTML));
     }
 
     if (field.startsWith('vocab:')) {
@@ -426,7 +427,7 @@ function renderBlock(card, block){
     return `
       <div class="content-block" data-card-id="${card.id}" data-block-id="${block.id}">
         ${drag}
-        <div class="html-block">${sanitizeRich(block.content||'')}</div>
+        <div class="html-block">${sanitizeRich(autoBoldAbbreviations(block.content||''))}</div>
         <div class="image-caption-tools">
           <button class="btn btn-soft" type="button" data-edit-html="${card.id}" data-block="${block.id}">&lt;/&gt; HTML 편집</button>
           <button class="block-delete" type="button" data-delete-block="${card.id}" data-block="${block.id}">HTML 삭제</button>
@@ -439,7 +440,7 @@ function renderBlock(card, block){
       ${drag}
       <div class="text-block">
         <span class="dot">•</span>
-        <div ${editing ? `class="editable" contenteditable="true" data-card="${card.id}" data-field="block" data-block="${block.id}"` : ''}>${sanitizeRich(block.content||'')}</div>
+        <div ${editing ? `class="editable" contenteditable="true" data-card="${card.id}" data-field="block" data-block="${block.id}"` : ''}>${sanitizeRich(autoBoldAbbreviations(block.content||''))}</div>
         ${editing ? `<button class="block-delete" type="button" data-delete-block="${card.id}" data-block="${block.id}">삭제</button>` : ''}
       </div>
     </div>`;
@@ -453,9 +454,7 @@ function renderCard(c){
   const vocab = (c.vocab||[]).length ? `
     <div class="panel">
       <h4>🔤 VOCAB</h4>
-      <ul>${c.vocab.map((x,i)=>`
-        <li ${editing ? `class="editable" contenteditable="true" data-card="${c.id}" data-field="vocab:${i}"` : ''}>${sanitizeRich(x)}</li>`).join('')}
-      </ul>
+      <div>${c.vocab.map((x,i)=>`<div class="vocab-row"><div ${editing?`class="editable" contenteditable="true" data-card="${c.id}" data-field="vocab:${i}"`:''}>${sanitizeRich(x)}</div>${editing?`<button class="mini-del" data-del-vocab="${c.id}" data-index="${i}">✕</button>`:''}</div>`).join('')}</div>
     </div>` : '';
 
   const trans = (c.translations||[]).length ? `
@@ -466,21 +465,7 @@ function renderCard(c){
       </ul>
     </div>` : '';
 
-  const qb = (c.qbank||[]).length ? `
-    <button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button>
-    <div class="qbox">${c.qbank.map(q=>`
-      <div class="qsection">
-        <div class="qhead">
-          <span class="date">${esc(q.date||'')}</span>
-          <span class="qtitle">${sanitizeRich(q.title||'')}</span>
-        </div>
-        ${(q.items||[]).map(i=>`
-          <div class="qitem">
-            <span class="status ${i.status==='X'?'X':'O'}">${esc(i.status||'O')}</span>
-            <div>${sanitizeRich(i.content)}</div>
-          </div>`).join('')}
-      </div>`).join('')}
-    </div>` : '';
+  const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>`<div class="qsection"><div class="qhead"><span class="date">${esc(q.date||'')}</span><span class="qtitle">${sanitizeRich(q.title||'')}</span>${editing?`<button class="mini-del" data-del-qsection="${c.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>${(q.items||[]).map((it,ii)=>`<div class="qrow"><button class="ox-edit ${it.status==='X'?'x':''}" data-toggle-ox="${c.id}" data-q-index="${qi}" data-item-index="${ii}">${it.status==='X'?'X':'O'}</button><div ${editing?`class="editable" contenteditable="true" data-q-item="${c.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" data-del-qitem="${c.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`).join('')}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qitem="${c.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qsection="${c.id}">+ 기출문제</button></div>`:''}`;
 
   return `
     <article class="card" aria-editing="${editing}">
@@ -516,9 +501,7 @@ function render(){
 
   $('#tabs').innerHTML =
     state.categories.map(c=>`
-      <button class="tab ${c.id===selectedCategory?'active':''}" data-cat="${esc(c.id)}">
-        ${esc(c.subLabel || c.title)}
-      </button>`).join('') +
+      <button class="tab ${c.id===selectedCategory?'active':''}" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span ${editing?`contenteditable="true" data-cat-name="${esc(c.id)}"`:''}>${esc(c.subLabel||c.title)}</span></button>`).join('') +
     (editing ? `<button class="tab tab-add" id="addCategoryBtn" title="카테고리 추가">＋</button>` : '');
 
   $('#tabs').querySelectorAll('.tab[data-cat]').forEach(b=>{
@@ -602,6 +585,15 @@ function bindDynamic(){
     if ($('#renameCategoryBtn')) $('#renameCategoryBtn').onclick = () => openCategoryModal(cat.id);
     if ($('#deleteCategoryBtn')) $('#deleteCategoryBtn').onclick = () => deleteCategory(cat.id);
 
+    document.querySelectorAll('[data-del-vocab]').forEach(b=>b.onclick=e=>{e.stopPropagation();findCard(b.dataset.delVocab).vocab.splice(+b.dataset.index,1);markDirty();render();});
+    document.querySelectorAll('[data-cat-name]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.oninput=()=>{const c=catById(el.dataset.catName);c.subLabel=el.textContent.trim();c.title=c.subLabel;markDirty();};});
+    document.querySelectorAll('[data-add-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQsection).qbank.push({date:'기출',title:'새 기출 주제',items:[{status:'O',content:'새 기출 항목'}]});markDirty();render();});
+    document.querySelectorAll('[data-del-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQsection).qbank.splice(+b.dataset.qIndex,1);markDirty();render();});
+    document.querySelectorAll('[data-add-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQitem).qbank[+b.dataset.qIndex].items.push({status:'O',content:'새 기출 항목'});markDirty();render();});
+    document.querySelectorAll('[data-del-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQitem).qbank[+b.dataset.qIndex].items.splice(+b.dataset.itemIndex,1);markDirty();render();});
+    document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();render();});
+    document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{findCard(el.dataset.qItem).qbank[+el.dataset.qIndex].items[+el.dataset.itemIndex].content=sanitizeRich(el.innerHTML);markDirty();});
+    initCategoryDrag();
     initDragHandles();
   }
 
@@ -621,6 +613,7 @@ function startEdit(){
   document.body.classList.add('editing');
   $('#saveBtn').hidden = false;
   $('#autoCardBtn').hidden = false;
+  $('#richToolbar').hidden = false;
   $('#editBtn').textContent = '편집 종료';
   $('#modeBadge').textContent = 'EDIT';
   setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
@@ -645,6 +638,7 @@ function tryExitEdit(){
   document.body.classList.remove('editing');
   $('#saveBtn').hidden = true;
   $('#autoCardBtn').hidden = true;
+  $('#richToolbar').hidden = true;
   $('#editBtn').textContent = '편집';
   $('#modeBadge').textContent = 'VIEW';
   $('#saveBtn').textContent = '저장';
@@ -1056,6 +1050,9 @@ function cancelImageModal(){
   imageTargetCardId = null;
 }
 
+function initCategoryDrag(){
+ document.querySelectorAll('[data-cat-drag]').forEach(h=>h.onpointerdown=e=>{e.preventDefault();e.stopPropagation();const tab=h.closest('.tab');tab.classList.add('cat-dragging');const mv=ev=>{const hit=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.tab[data-category-id]');if(hit&&hit!==tab){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('cat-drag-over'));hit.classList.add('cat-drag-over');const r=hit.getBoundingClientRect();hit.parentElement.insertBefore(tab,ev.clientX<r.left+r.width/2?hit:hit.nextSibling);}};const up=()=>{document.removeEventListener('pointermove',mv);const ids=[...$('#tabs').querySelectorAll('[data-category-id]')].map(x=>x.dataset.categoryId),map=new Map(state.categories.map(x=>[x.id,x]));state.categories=ids.map((id,i)=>{const x=map.get(id);return x?{...x,order:i}:null}).filter(Boolean);markDirty();render();};document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up,{once:true});});
+}
 function initDragHandles(){
   document.querySelectorAll('.drag-handle').forEach(handle=>{
     handle.addEventListener('pointerdown', onDragStart, {passive:false});
@@ -1201,6 +1198,15 @@ function onDragCancel(e){
   finishDrag(false);
 }
 
+
+function autoBoldAbbreviations(raw){
+ return String(raw??'').replace(/(^|[\s>])(Sx|Tx|Cz|Cx):(?=\s|&nbsp;|<|$)/gi,(m,p,x)=>`${p}<b>${x}:</b>`);
+}
+function applyRichCommand(cmd,value=null){if(!editing)return;document.execCommand(cmd,false,value);markDirty();}
+function collectVocabularyFromBlocks(card){
+ const have=new Set((card.vocab||[]).map(x=>plainTextFromHtml(x).trim().toLowerCase()));
+ for(const b of card.blocks||[]){if(!['text','html'].includes(b.type))continue;const t=plainTextFromHtml(b.content||'');const r=/(?:^|\s)([A-Za-z][A-Za-z0-9 /-]{1,40})\s*[-–—:]\s*([가-힣][^,;()\n]{1,50})/g;let m;while((m=r.exec(t))){const v=`${m[1].trim()} - ${m[2].trim()}`;if(!have.has(v.toLowerCase())){have.add(v.toLowerCase());card.vocab.push(sanitizeRich(v));}}}
+}
 
 function normalizeAutoLine(line){
   return String(line || '').replace(/\uFE0F/g, '').trim();
@@ -1349,7 +1355,7 @@ function createCardsFromAutoText(){
     const blocks = parsed.notes.map((n,i)=>({
       id:makeId('txt'),
       type:'text',
-      content:sanitizeRich(n.text),
+      content:sanitizeRich(autoBoldAbbreviations(n.text)),
       order:i
     }));
 
@@ -1416,6 +1422,7 @@ function bind(){
   $('#editBtn').onclick = toggleEdit;
   $('#saveBtn').onclick = () => persistData(true);
   $('#autoCardBtn').onclick = openAutoCardModal;
+  $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff59d'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
 
   $('#addCardBtn').onclick = () => {
     if (!editing) startEdit();
@@ -1496,7 +1503,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.1 intentionally does NOT auto-save on background/visibility changes.
+  // v0.4.2 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

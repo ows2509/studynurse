@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.2.3</title>
+<title>StudyNurse v0.3.0</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -21,14 +21,20 @@
       <button class="btn btn-primary" id="saveBtn" hidden>저장</button>
     </div>
     <div class="searchrow">
-      <input class="search" id="searchInput" placeholder="개념 · 단어 · 기출 검색">
+      <input class="search" id="searchInput" placeholder="개념 · 단어 · 기출 · HTML 내용 검색">
     </div>
   </div>
-  <div class="navbox"><div class="tabs" id="tabs"></div></div>
+
+  <div class="navbox">
+    <div class="tabs" id="tabs"></div>
+  </div>
+
   <div id="content"></div>
 </div>
 
 <button class="fab" id="addCardBtn" title="새 카드">＋</button>
+<input type="file" id="imageInput" accept="image/*" hidden>
+
 <div class="modal" id="cardModal">
  <div class="modalbox">
   <h3>새 개념 카드</h3>
@@ -37,6 +43,34 @@
   <div class="field"><label>개념 (줄바꿈 = 항목)</label><textarea id="newBullets"></textarea></div>
   <button class="btn btn-pink" id="createCardBtn">추가</button>
   <button class="btn btn-soft" id="closeCardBtn">취소</button>
+ </div>
+</div>
+
+<div class="modal" id="categoryModal">
+ <div class="modalbox">
+  <h3 id="categoryModalTitle">새 카테고리</h3>
+  <div class="field"><label>표시 이름</label><input id="categoryName" placeholder="예: Neuro"></div>
+  <div class="field"><label>설명 (선택)</label><input id="categorySubtitle" placeholder="예: Neurology"></div>
+  <button class="btn btn-pink" id="saveCategoryBtn">추가</button>
+  <button class="btn btn-soft" id="closeCategoryBtn">취소</button>
+ </div>
+</div>
+
+<div class="modal" id="htmlModal">
+ <div class="modalbox html-modalbox">
+  <h3>HTML 직접 편집</h3>
+  <p class="small">표, 강조, 색상 등 HTML을 사용할 수 있습니다. script / iframe / onClick 등 실행형 코드는 자동 제거됩니다.</p>
+  <div class="field">
+    <label>HTML</label>
+    <textarea id="htmlEditor" class="code-editor" spellcheck="false"></textarea>
+  </div>
+  <div class="field">
+    <label>미리보기</label>
+    <div id="htmlPreview" class="html-preview"></div>
+  </div>
+  <button class="btn btn-soft" id="previewHtmlBtn">미리보기</button>
+  <button class="btn btn-pink" id="applyHtmlBtn">적용</button>
+  <button class="btn btn-soft" id="closeHtmlBtn">취소</button>
  </div>
 </div>
 

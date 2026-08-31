@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.3.1';
+const APP_VERSION = '0.3.2';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1055,82 +1055,147 @@ function cancelImageModal(){
 
 function initDragHandles(){
   document.querySelectorAll('.drag-handle').forEach(handle=>{
-    handle.addEventListener('pointerdown', onDragStart);
+    handle.addEventListener('pointerdown', onDragStart, {passive:false});
   });
 }
 
 let dragState = null;
 
 function onDragStart(e){
-  if (!editing) return;
+  if (!editing || e.button === 2) return;
+
   const handle = e.currentTarget;
   const blockEl = handle.closest('.content-block');
   const flow = blockEl?.closest('.content-flow');
   if (!blockEl || !flow) return;
 
   e.preventDefault();
-  handle.setPointerCapture?.(e.pointerId);
+  e.stopPropagation();
 
   dragState = {
-    pointerId:e.pointerId,
+    pointerId: e.pointerId,
     handle,
     blockEl,
     flow,
-    cardId:handle.dataset.dragCard
+    cardId: handle.dataset.dragCard,
+    startX: e.clientX,
+    startY: e.clientY,
+    started: false,
+    originalOrder: [...flow.querySelectorAll('.content-block')].map(el=>el.dataset.blockId)
   };
-  blockEl.classList.add('dragging');
 
-  handle.addEventListener('pointermove', onDragMove);
-  handle.addEventListener('pointerup', onDragEnd);
-  handle.addEventListener('pointercancel', onDragEnd);
+  document.body.classList.add('block-drag-active');
+
+  try {
+    handle.setPointerCapture(e.pointerId);
+  } catch (_) {}
+
+  // Document-level tracking is more reliable than listening on the tiny handle itself.
+  document.addEventListener('pointermove', onDragMove, {passive:false});
+  document.addEventListener('pointerup', onDragEnd, {passive:false});
+  document.addEventListener('pointercancel', onDragCancel, {passive:false});
 }
 
 function onDragMove(e){
   if (!dragState || e.pointerId !== dragState.pointerId) return;
   e.preventDefault();
 
-  const candidates = [...dragState.flow.querySelectorAll('.content-block')]
-    .filter(el => el !== dragState.blockEl);
+  const dx = e.clientX - dragState.startX;
+  const dy = e.clientY - dragState.startY;
 
-  let target = null;
-  for (const el of candidates) {
-    const r = el.getBoundingClientRect();
-    if (e.clientY >= r.top && e.clientY <= r.bottom) {
-      target = el;
-      const before = e.clientY < r.top + r.height/2;
-      dragState.flow.insertBefore(
-        dragState.blockEl,
-        before ? el : el.nextSibling
-      );
-      break;
-    }
+  // Small threshold prevents a simple tap from becoming a drag.
+  if (!dragState.started) {
+    if (Math.hypot(dx, dy) < 6) return;
+    dragState.started = true;
+    dragState.blockEl.classList.add('dragging');
   }
 
-  candidates.forEach(el => el.classList.toggle('drag-over', el === target));
+  // elementFromPoint identifies the block currently under the finger/mouse,
+  // even while the pointer is captured by the drag handle.
+  const hit = document.elementFromPoint(e.clientX, e.clientY);
+  const target = hit?.closest('.content-block');
+
+  dragState.flow.querySelectorAll('.content-block').forEach(el=>{
+    el.classList.remove('drag-over');
+  });
+
+  if (!target || target === dragState.blockEl || target.parentElement !== dragState.flow) {
+    // Allow moving to very top/bottom when pointer is outside a specific block.
+    const rect = dragState.flow.getBoundingClientRect();
+    const blocks = [...dragState.flow.querySelectorAll('.content-block')]
+      .filter(el => el !== dragState.blockEl);
+
+    if (e.clientY < rect.top + 20 && blocks.length) {
+      dragState.flow.insertBefore(dragState.blockEl, blocks[0]);
+    } else if (e.clientY > rect.bottom - 20) {
+      dragState.flow.appendChild(dragState.blockEl);
+    }
+    return;
+  }
+
+  const r = target.getBoundingClientRect();
+  const before = e.clientY < r.top + r.height / 2;
+
+  target.classList.add('drag-over');
+  dragState.flow.insertBefore(
+    dragState.blockEl,
+    before ? target : target.nextSibling
+  );
 }
 
-function onDragEnd(e){
-  if (!dragState || e.pointerId !== dragState.pointerId) return;
+function finishDrag(commit){
+  if (!dragState) return;
 
-  const {handle,blockEl,flow,cardId} = dragState;
-  handle.removeEventListener('pointermove', onDragMove);
-  handle.removeEventListener('pointerup', onDragEnd);
-  handle.removeEventListener('pointercancel', onDragEnd);
+  const {handle, blockEl, flow, cardId, pointerId, originalOrder, started} = dragState;
+
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragCancel);
+
+  try {
+    if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
+  } catch (_) {}
 
   blockEl.classList.remove('dragging');
-  flow.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  flow.querySelectorAll('.content-block').forEach(el=>el.classList.remove('drag-over'));
+  document.body.classList.remove('block-drag-active');
 
   const card = findCard(cardId);
-  if (card) {
-    const ids = [...flow.querySelectorAll('.content-block')].map(el=>el.dataset.blockId);
-    const map = new Map(card.blocks.map(b=>[b.id,b]));
-    card.blocks = ids.map((id,i)=>({...map.get(id),order:i})).filter(Boolean);
-    syncLegacyFields(card);
-    markDirty();
+
+  if (card && started) {
+    if (commit) {
+      const ids = [...flow.querySelectorAll('.content-block')].map(el=>el.dataset.blockId);
+      const map = new Map(card.blocks.map(b=>[b.id,b]));
+      card.blocks = ids.map((id,i)=>{
+        const b = map.get(id);
+        return b ? {...b, order:i} : null;
+      }).filter(Boolean);
+      syncLegacyFields(card);
+      markDirty();
+    } else {
+      const map = new Map(card.blocks.map(b=>[b.id,b]));
+      card.blocks = originalOrder.map((id,i)=>{
+        const b = map.get(id);
+        return b ? {...b, order:i} : null;
+      }).filter(Boolean);
+      syncLegacyFields(card);
+    }
   }
 
   dragState = null;
   render();
+}
+
+function onDragEnd(e){
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  e.preventDefault();
+  finishDrag(true);
+}
+
+function onDragCancel(e){
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  e.preventDefault();
+  finishDrag(false);
 }
 
 function bind(){
@@ -1209,7 +1274,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.3.1 intentionally does NOT auto-save on background/visibility changes.
+  // v0.3.2 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

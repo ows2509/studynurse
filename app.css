@@ -120,7 +120,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* StudyNurse v0.3.1 */
+/* StudyNurse v0.3.2 */
 .envbadge{
   font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
   background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
@@ -208,4 +208,25 @@ button,input,textarea,select{font:inherit}
   .drag-handle{width:30px;height:34px}
   .crop-grid,.field-row{grid-template-columns:1fr}
   .image-modalbox{max-height:92vh}
+}
+
+
+/* v0.3.2 drag bugfix */
+.drag-handle{
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none !important;
+  user-select:none !important;
+  -webkit-user-select:none !important;
+}
+.block-drag-active,
+.block-drag-active *{
+  user-select:none !important;
+  -webkit-user-select:none !important;
+}
+.block-drag-active{
+  cursor:grabbing;
+  overscroll-behavior:contain;
+}
+.block-drag-active .content-block:not(.dragging){
+  transition:transform .08s ease;
 }

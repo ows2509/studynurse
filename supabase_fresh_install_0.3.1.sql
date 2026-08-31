@@ -1,4 +1,4 @@
--- StudyNurse v0.3.1 NON-DESTRUCTIVE UPGRADE
+-- StudyNurse v0.3.2 NON-DESTRUCTIVE UPGRADE
 -- Existing study_documents data is preserved.
 -- Safe to run even if v0.3.0 upgrade SQL was already executed.
 
@@ -42,18 +42,18 @@ end $$;
 
 grant select, insert on public.study_revision_log to anon, authenticated;
 
--- Preserve the exact pre-v0.3.1 document once.
+-- Preserve the exact pre-v0.3.2 document once.
 insert into public.study_revision_log(doc_key, payload, source_version, reason)
 select d.doc_key,
        d.payload,
        coalesce(d.payload->>'version','legacy'),
-       'upgrade-baseline-v0.3.1'
+       'upgrade-baseline-v0.3.2'
 from public.study_documents d
 where not exists (
   select 1
   from public.study_revision_log l
   where l.doc_key=d.doc_key
-    and l.reason='upgrade-baseline-v0.3.1'
+    and l.reason='upgrade-baseline-v0.3.2'
 );
 
 -- Ensure image bucket exists. Does not delete existing files.

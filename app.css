@@ -120,7 +120,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* StudyNurse v0.3.2 */
+/* StudyNurse v0.4.0 */
 .envbadge{
   font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
   background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
@@ -211,7 +211,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* v0.3.2 drag bugfix */
+/* v0.4.0 drag bugfix */
 .drag-handle{
   -webkit-tap-highlight-color:transparent;
   touch-action:none !important;
@@ -230,3 +230,4 @@ button,input,textarea,select{font:inherit}
 .block-drag-active .content-block:not(.dragging){
   transition:transform .08s ease;
 }
+\n\n/* StudyNurse v0.4.0 - auto card parser */\n.auto-modalbox{max-width:760px}\n.auto-card-input{min-height:300px!important;line-height:1.45}\n.auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}\n.auto-preview-summary{display:none;margin:10px 0;padding:9px 11px;border:1px solid var(--pinkBorder);border-radius:10px;background:var(--pinkSoft);color:var(--pinkDark);font-size:.82rem;font-weight:800}\n.auto-preview-summary.show{display:block}\n.auto-preview-list{display:flex;flex-direction:column;gap:10px}\n.auto-preview-card{border:1.5px solid var(--border);border-radius:12px;padding:12px;background:#fff}\n.auto-preview-title{font-weight:900;color:var(--pinkDark);margin-bottom:7px}\n.auto-preview-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}\n.auto-preview-chip{font-size:.72rem;padding:3px 7px;border-radius:999px;background:var(--brownSoft);color:var(--brown);border:1px solid var(--border);font-weight:800}\n.auto-preview-lines{margin:0;padding-left:18px;line-height:1.35;font-size:.85rem}\n.auto-preview-lines li{margin:3px 0}\n.auto-preview-empty{text-align:center;color:var(--sub);padding:16px;border:1px dashed var(--border);border-radius:10px}\n.auto-ox-x{color:#d32f2f;font-weight:900}.auto-ox-o{color:#c2185b;font-weight:900}\n@media(max-width:700px){.auto-modalbox{max-height:92vh}.auto-card-input{min-height:240px!important}}\n

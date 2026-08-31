@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.4.1';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -506,7 +506,6 @@ function renderCard(c){
         <button class="btn btn-soft" data-add-trans="${c.id}">+ 번역</button>
         <button class="btn btn-soft" data-add-image="${c.id}">+ 이미지</button>
         <button class="btn btn-soft" data-add-html="${c.id}">&lt;/&gt; HTML</button>
-        <button class="btn btn-soft" data-auto-card="${c.id}">⚡ 텍스트 자동정리</button>
         <button class="btn btn-danger" data-del-card="${c.id}">카드 삭제</button>
       </div>
     </article>`;
@@ -571,7 +570,6 @@ function bindDynamic(){
     document.querySelectorAll('[data-add-trans]').forEach(b => b.onclick = () => addTrans(b.dataset.addTrans));
     document.querySelectorAll('[data-add-image]').forEach(b => b.onclick = () => chooseImage(b.dataset.addImage));
     document.querySelectorAll('[data-add-html]').forEach(b => b.onclick = () => openHtmlEditor(b.dataset.addHtml));
-    document.querySelectorAll('[data-auto-card]').forEach(b => b.onclick = openAutoCardModal);
     document.querySelectorAll('[data-edit-html]').forEach(b => b.onclick = () => openHtmlEditor(b.dataset.editHtml, b.dataset.block));
     document.querySelectorAll('[data-delete-block]').forEach(b => b.onclick = () => deleteBlock(b.dataset.deleteBlock, b.dataset.block));
     document.querySelectorAll('[data-del-card]').forEach(b => b.onclick = () => deleteCard(b.dataset.delCard));
@@ -622,6 +620,7 @@ function startEdit(){
   dirty = false;
   document.body.classList.add('editing');
   $('#saveBtn').hidden = false;
+  $('#autoCardBtn').hidden = false;
   $('#editBtn').textContent = '편집 종료';
   $('#modeBadge').textContent = 'EDIT';
   setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
@@ -645,6 +644,7 @@ function tryExitEdit(){
   editSnapshot = null;
   document.body.classList.remove('editing');
   $('#saveBtn').hidden = true;
+  $('#autoCardBtn').hidden = true;
   $('#editBtn').textContent = '편집';
   $('#modeBadge').textContent = 'VIEW';
   $('#saveBtn').textContent = '저장';
@@ -1201,11 +1201,221 @@ function onDragCancel(e){
   finishDrag(false);
 }
 
-\nfunction normalizeAutoLine(line){\n  return String(line||'').replace(/\\uFE0F/g,'').trim();\n}\nfunction detectAutoTitle(line){\n  const s=normalizeAutoLine(line);\n  let m=s.match(/^<([^>]+)>\\s*$/); if(m) return m[1].trim();\n  m=s.match(/^#{1,2}\\s+(.+)$/); if(m) return m[1].trim();\n  return null;\n}\nfunction parseOXPrefix(line){\n  let s=normalizeAutoLine(line).replace(/^[-*•]\\s*/,'');\n  let status=null;\n  if(/^(❎|❌|\\[X\\])\\s*/i.test(s)){status='X';s=s.replace(/^(❎|❌|\\[X\\])\\s*/i,'');}\n  else if(/^(🅾|⭕|\\[O\\])\\s*/i.test(s)){status='O';s=s.replace(/^(🅾|⭕|\\[O\\])\\s*/i,'');}\n  return {status,text:s.trim()};\n}\nfunction parseAutoCards(rawText){\n  const lines=String(rawText||'').replace(/\\r\\n?/g,'\\n').split('\\n');\n  const blocks=[]; let current=null;\n  const push=()=>{if(current){current.title=current.title?.trim()||'새로운 주제';blocks.push(current);current=null;}};\n  for(const raw of lines){\n    const line=normalizeAutoLine(raw); if(!line) continue;\n    const title=detectAutoTitle(line);\n    if(title){push();current={title,notes:[],vocab:[],translations:[],sourceLines:[]};continue;}\n    if(!current){current={title:line,notes:[],vocab:[],translations:[],sourceLines:[]};continue;}\n    current.sourceLines.push(line);\n    let m=line.match(/^(vocab|단어)\\s*[:：]\\s*(.*)$/i);\n    if(m){if(m[2].trim())current.vocab.push(m[2].trim());continue;}\n    m=line.match(/^(trans|translation|해석|번역)\\s*[:：]\\s*(.*)$/i);\n    if(m){if(m[2].trim())current.translations.push(m[2].trim());continue;}\n    const ox=parseOXPrefix(line);\n    if(ox.status) current.notes.push({text:`${ox.status==='X'?'❎':'🅾️'} ${ox.text}`,status:ox.status});\n    else current.notes.push({text:line.replace(/^[-*•]\\s*/,'').trim(),status:null});\n  }\n  push();\n  return blocks.filter(b=>b.title||b.notes.length||b.vocab.length||b.translations.length);\n}\nfunction renderAutoPreview(){\n  const raw=$('#autoCardInput').value.trim();\n  autoParsedCards=parseAutoCards(raw);\n  const summary=$('#autoPreviewSummary'),list=$('#autoPreviewList'),createBtn=$('#createAutoCardsBtn');\n  if(!raw||autoParsedCards.length===0){summary.classList.remove('show');summary.textContent='';list.innerHTML='<div class="auto-preview-empty">정리할 수 있는 카드가 없습니다.</div>';createBtn.disabled=true;return;}\n  const totals=autoParsedCards.reduce((a,c)=>{a.notes+=c.notes.length;a.vocab+=c.vocab.length;a.trans+=c.translations.length;return a;},{notes:0,vocab:0,trans:0});\n  summary.textContent=`생성 예정 ${autoParsedCards.length}개 카드 · 개념 ${totals.notes}개 · VOCAB ${totals.vocab}개 · 번역 ${totals.trans}개`;summary.classList.add('show');\n  list.innerHTML=autoParsedCards.map((c,i)=>`<div class="auto-preview-card"><div class="auto-preview-title">${i+1}. ${esc(c.title)}</div><div class="auto-preview-meta"><span class="auto-preview-chip">개념 ${c.notes.length}</span><span class="auto-preview-chip">VOCAB ${c.vocab.length}</span><span class="auto-preview-chip">번역 ${c.translations.length}</span></div>${c.notes.length?`<ul class="auto-preview-lines">${c.notes.slice(0,8).map(n=>`<li>${n.status==='X'?'<span class="auto-ox-x">❎</span> ':n.status==='O'?'<span class="auto-ox-o">🅾️</span> ':''}${esc(n.text.replace(/^(❎|🅾️)\\s*/,''))}</li>`).join('')}${c.notes.length>8?`<li>… 외 ${c.notes.length-8}개</li>`:''}</ul>`:''}</div>`).join('');\n  createBtn.disabled=false;\n}\nfunction createCardsFromAutoText(){\n  const cat=catById(selectedCategory); if(!cat){alert('카테고리를 선택하세요.');return;}\n  if(!autoParsedCards.length){renderAutoPreview();if(!autoParsedCards.length)return;}\n  for(const parsed of autoParsedCards){\n    const blocks=parsed.notes.map((n,i)=>({id:makeId('txt'),type:'text',content:sanitizeRich(n.text),order:i}));\n    const card={id:makeId(cat.id||'card'),title:esc(parsed.title),keywords:[],blocks,bullets:[],vocab:parsed.vocab.map(v=>sanitizeRich(v)),translations:parsed.translations.map(v=>sanitizeRich(v)),images:[],qbank:[],customHtml:'',order:cat.cards.length,updatedAt:new Date().toISOString()};\n    syncLegacyFields(card);cat.cards.push(card);\n  }\n  const count=autoParsedCards.length;\n  $('#autoCardModal').classList.remove('open');$('#autoCardInput').value='';$('#autoPreviewSummary').classList.remove('show');$('#autoPreviewSummary').textContent='';$('#autoPreviewList').innerHTML='';autoParsedCards=[];\n  markDirty();render();\n  alert(`${count}개 카드를 편집 화면에 생성했습니다.\\n아직 DB에는 저장되지 않았습니다.\\n내용을 확인한 뒤 [저장] 버튼을 눌러주세요.`);\n}\nfunction openAutoCardModal(){\n  if(!editing) startEdit();autoParsedCards=[];$('#autoCardInput').value='';$('#autoPreviewSummary').classList.remove('show');$('#autoPreviewSummary').textContent='';$('#autoPreviewList').innerHTML='';$('#createAutoCardsBtn').disabled=true;$('#autoCardModal').classList.add('open');setTimeout(()=>$('#autoCardInput').focus(),50);\n}\nfunction closeAutoCardModal(){$('#autoCardModal').classList.remove('open');autoParsedCards=[];}\n
+
+function normalizeAutoLine(line){
+  return String(line || '').replace(/\uFE0F/g, '').trim();
+}
+
+function detectAutoTitle(line){
+  const s = normalizeAutoLine(line);
+  let m = s.match(/^<([^>]+)>\s*$/);
+  if (m) return m[1].trim();
+
+  m = s.match(/^#{1,2}\s+(.+)$/);
+  if (m) return m[1].trim();
+
+  return null;
+}
+
+function parseOXPrefix(line){
+  let s = normalizeAutoLine(line).replace(/^[-*•]\s*/, '');
+  let status = null;
+
+  if (/^(❎|❌|\[X\])\s*/i.test(s)) {
+    status = 'X';
+    s = s.replace(/^(❎|❌|\[X\])\s*/i, '');
+  } else if (/^(🅾|⭕|\[O\])\s*/i.test(s)) {
+    status = 'O';
+    s = s.replace(/^(🅾|⭕|\[O\])\s*/i, '');
+  }
+
+  return {status, text:s.trim()};
+}
+
+function parseAutoCards(rawText){
+  const lines = String(rawText || '').replace(/\r\n?/g, '\n').split('\n');
+  const cards = [];
+  let current = null;
+
+  function pushCurrent(){
+    if (!current) return;
+    current.title = current.title?.trim() || '새로운 주제';
+    cards.push(current);
+    current = null;
+  }
+
+  for (const raw of lines) {
+    const line = normalizeAutoLine(raw);
+    if (!line) continue;
+
+    const title = detectAutoTitle(line);
+    if (title) {
+      pushCurrent();
+      current = {title, notes:[], vocab:[], translations:[]};
+      continue;
+    }
+
+    if (!current) {
+      current = {title:line, notes:[], vocab:[], translations:[]};
+      continue;
+    }
+
+    let m = line.match(/^(vocab|단어)\s*[:：]\s*(.*)$/i);
+    if (m) {
+      if (m[2].trim()) current.vocab.push(m[2].trim());
+      continue;
+    }
+
+    m = line.match(/^(trans|translation|해석|번역)\s*[:：]\s*(.*)$/i);
+    if (m) {
+      if (m[2].trim()) current.translations.push(m[2].trim());
+      continue;
+    }
+
+    const ox = parseOXPrefix(line);
+    const prefix = ox.status === 'X' ? '❎ ' : ox.status === 'O' ? '🅾️ ' : '';
+    current.notes.push({text:prefix + ox.text, status:ox.status});
+  }
+
+  pushCurrent();
+
+  return cards.filter(c =>
+    c.title || c.notes.length || c.vocab.length || c.translations.length
+  );
+}
+
+function renderAutoPreview(){
+  const raw = $('#autoCardInput').value.trim();
+  autoParsedCards = parseAutoCards(raw);
+
+  const summary = $('#autoPreviewSummary');
+  const list = $('#autoPreviewList');
+  const createBtn = $('#createAutoCardsBtn');
+
+  if (!raw || autoParsedCards.length === 0) {
+    summary.classList.remove('show');
+    summary.textContent = '';
+    list.innerHTML = '<div class="auto-preview-empty">정리할 수 있는 카드가 없습니다.</div>';
+    createBtn.disabled = true;
+    return;
+  }
+
+  const totals = autoParsedCards.reduce((a,c)=>{
+    a.notes += c.notes.length;
+    a.vocab += c.vocab.length;
+    a.trans += c.translations.length;
+    return a;
+  }, {notes:0,vocab:0,trans:0});
+
+  summary.textContent =
+    `생성 예정 ${autoParsedCards.length}개 카드 · 개념 ${totals.notes}개 · VOCAB ${totals.vocab}개 · 번역 ${totals.trans}개`;
+  summary.classList.add('show');
+
+  list.innerHTML = autoParsedCards.map((c,i)=>`
+    <div class="auto-preview-card">
+      <div class="auto-preview-title">${i+1}. ${esc(c.title)}</div>
+      <div class="auto-preview-meta">
+        <span class="auto-preview-chip">개념 ${c.notes.length}</span>
+        <span class="auto-preview-chip">VOCAB ${c.vocab.length}</span>
+        <span class="auto-preview-chip">번역 ${c.translations.length}</span>
+      </div>
+      ${c.notes.length ? `
+        <ul class="auto-preview-lines">
+          ${c.notes.slice(0,8).map(n=>`
+            <li>${n.status==='X' ? '<span class="auto-ox-x">❎</span> ' :
+                  n.status==='O' ? '<span class="auto-ox-o">🅾️</span> ' : ''}
+              ${esc(n.text.replace(/^(❎|🅾️)\s*/,''))}
+            </li>`).join('')}
+          ${c.notes.length>8 ? `<li>… 외 ${c.notes.length-8}개</li>` : ''}
+        </ul>` : ''}
+    </div>`).join('');
+
+  createBtn.disabled = false;
+}
+
+function createCardsFromAutoText(){
+  const cat = catById(selectedCategory);
+  if (!cat) {
+    alert('카테고리를 선택하세요.');
+    return;
+  }
+
+  if (!autoParsedCards.length) {
+    renderAutoPreview();
+    if (!autoParsedCards.length) return;
+  }
+
+  for (const parsed of autoParsedCards) {
+    const blocks = parsed.notes.map((n,i)=>({
+      id:makeId('txt'),
+      type:'text',
+      content:sanitizeRich(n.text),
+      order:i
+    }));
+
+    const card = {
+      id:makeId(cat.id || 'card'),
+      title:esc(parsed.title),
+      keywords:[],
+      blocks,
+      bullets:[],
+      vocab:parsed.vocab.map(v=>sanitizeRich(v)),
+      translations:parsed.translations.map(v=>sanitizeRich(v)),
+      images:[],
+      qbank:[],
+      customHtml:'',
+      order:cat.cards.length,
+      updatedAt:new Date().toISOString()
+    };
+
+    syncLegacyFields(card);
+    cat.cards.push(card);
+  }
+
+  const count = autoParsedCards.length;
+
+  $('#autoCardModal').classList.remove('open');
+  $('#autoCardInput').value = '';
+  $('#autoPreviewSummary').classList.remove('show');
+  $('#autoPreviewSummary').textContent = '';
+  $('#autoPreviewList').innerHTML = '';
+  autoParsedCards = [];
+
+  markDirty();
+  render();
+
+  alert(
+    `${count}개 카드를 편집 화면에 생성했습니다.\n` +
+    `아직 DB에는 저장되지 않았습니다.\n` +
+    `내용을 확인한 뒤 [저장] 버튼을 눌러주세요.`
+  );
+}
+
+function openAutoCardModal(){
+  if (!editing) startEdit();
+
+  autoParsedCards = [];
+  $('#autoCardInput').value = '';
+  $('#autoPreviewSummary').classList.remove('show');
+  $('#autoPreviewSummary').textContent = '';
+  $('#autoPreviewList').innerHTML = '';
+  $('#createAutoCardsBtn').disabled = true;
+  $('#autoCardModal').classList.add('open');
+
+  setTimeout(()=>$('#autoCardInput').focus(), 50);
+}
+
+function closeAutoCardModal(){
+  $('#autoCardModal').classList.remove('open');
+  autoParsedCards = [];
+}
+
+
 function bind(){
   $('#searchInput').addEventListener('input', render);
   $('#editBtn').onclick = toggleEdit;
   $('#saveBtn').onclick = () => persistData(true);
+  $('#autoCardBtn').onclick = openAutoCardModal;
 
   $('#addCardBtn').onclick = () => {
     if (!editing) startEdit();
@@ -1248,7 +1458,10 @@ function bind(){
   $('#previewAutoCardsBtn').onclick = renderAutoPreview;
   $('#createAutoCardsBtn').onclick = createCardsFromAutoText;
   $('#closeAutoCardsBtn').onclick = closeAutoCardModal;
-  $('#autoCardInput').addEventListener('input', () => { autoParsedCards = []; $('#createAutoCardsBtn').disabled = true; });
+  $('#autoCardInput').addEventListener('input', () => {
+    autoParsedCards = [];
+    $('#createAutoCardsBtn').disabled = true;
+  });
 }
 
 async function init(){
@@ -1283,7 +1496,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.0 intentionally does NOT auto-save on background/visibility changes.
+  // v0.4.1 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

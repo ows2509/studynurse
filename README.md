@@ -1,92 +1,133 @@
-# StudyNurse v0.3.0
+# StudyNurse v0.3.1
 
-## 가장 중요한 업그레이드 원칙
+## 핵심 변경
 
-v0.3.0은 기존 Supabase `study_documents` 데이터를 초기화하지 않습니다.
+### 1. 자동 저장 제거
+편집 중에는 Supabase DB에 자동 저장하지 않습니다.
 
-- `DROP TABLE study_documents` 없음
-- 기존 `study_documents/main.payload` 삭제 없음
-- 기존 데이터를 seed.json으로 덮어쓰지 않음
-- 클라우드 데이터가 있으면 항상 클라우드 데이터를 우선 로드
-- 기존 JSON 구조에 없는 새 필드만 런타임에서 추가
-- 업그레이드 직전 DB payload를 `study_revision_log`에 baseline으로 보존
-- 이후 삭제 등 중요 변경 전 revision snapshot 보존
+- `저장` 버튼을 눌렀을 때만 DB 반영
+- `편집 종료`를 눌렀는데 저장하지 않은 변경이 있으면 경고
+- `저장하지 않고 종료`를 확인하면 편집 시작 전 상태로 되돌림
+- 새로고침/페이지 종료 시에도 미저장 변경 경고
+- 백그라운드 전환으로 자동 저장하지 않음
 
-## 신기능
+### 2. DEV / PROD 분리
+기본 주소:
 
-1. 카드 이미지 추가/삭제
-   - Supabase Storage `studynurse-images`
-   - 최대 10MB
-   - JPEG/PNG/WebP/GIF
-   - DB에는 이미지 URL만 저장
+    https://ows2509.github.io/studynurse/
 
-2. HTML 직접 편집
-   - 카드별 `</> HTML`
-   - 실시간 미리보기
-   - table/div/span/b/u/i 등 HTML 사용 가능
-   - script/iframe/이벤트 핸들러/javascript URL은 자동 제거
+PROD 설정 `config.js` 사용.
 
-3. 카테고리 추가
-   - EDIT 모드에서 Cardio/Urinary/... 우측 `+`
-   - 카테고리 추가/이름 수정/삭제 가능
+DEV 주소:
 
-4. 변경 이력
-   - `study_revision_log`
-   - v0.3.0 업그레이드 직전 baseline 자동 보존
-   - 수동 저장 또는 중요 삭제 작업 시 snapshot
-   - 일반 자동저장은 최대 10분 간격 checkpoint로 제한
+    https://ows2509.github.io/studynurse/?dev=1
 
-## 기존 v0.2.3에서 업그레이드
+`config.dev.js` 사용.
+
+DEV Supabase를 별도 프로젝트로 만들면 운영 DB를 건드리지 않고 기능 시험이 가능합니다.
+DEV 설정이 비어 있으면 DEV 모드는 브라우저 로컬 DB만 사용합니다.
+
+### 3. 이미지 업로드 설정
+이미지 선택 후 즉시 올리지 않고 설정 창이 표시됩니다.
+
+프리셋:
+- 원본 유지
+- 고화질: 최대 2560px / 품질 90%
+- 기본: 최대 1600px / 품질 84%
+- 용량 절약: 최대 1024px / 품질 74%
+
+추가 기능:
+- 좌/우/상/하 자르기
+- 0/90/180/270도 회전
+- 표시 크기 25/50/75/100%
+- 원본 용량과 변환 후 예상 용량 표시
+
+### 4. 문단 + 이미지 드래그 앤 드롭
+개념 문단, HTML 블록, 이미지가 동일한 `blocks` 구조로 관리됩니다.
+
+EDIT 모드에서 블록 왼쪽 `⋮⋮` 영역을 잡고 위/아래로 드래그하면:
+- 이미지 ↔ 개념 문단
+- 이미지 ↔ HTML 블록
+- 개념 문단 ↔ 개념 문단
+
+순서를 자유롭게 바꿀 수 있습니다.
+
+위/아래 이동 버튼은 넣지 않았습니다.
+이미지 자체의 기본 브라우저 드래그는 차단했습니다.
+
+### 5. 기존 DB 보존
+기존 `study_documents/main` payload를 삭제하거나 seed 데이터로 덮어쓰지 않습니다.
+
+구버전:
+- bullets
+- images
+- customHtml
+
+을 v0.3.1 최초 로드 시 `blocks`로 비파괴 변환합니다.
+기존 필드도 계속 동기화해서 남겨 둡니다.
+
+`supabase_upgrade_0.3.1.sql` 실행 시 현재 운영 DB를
+`study_revision_log`에 `upgrade-baseline-v0.3.1`로 한 번 보존합니다.
+
+## 업그레이드 절차
 
 압축 해제:
 
-    C:\ows\CODING\Studynurse\StudyNurse-v0.3.0
+    C:\ows\CODING\Studynurse\StudyNurse-v0.3.1
 
 WSL:
 
-    cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.3.0
-    chmod +x upgrade_from_0.2.3.sh verify_version.sh serve_wsl.sh
-    ./upgrade_from_0.2.3.sh
+    cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.3.1
+    chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
+    ./upgrade_from_previous.sh
 
-이 스크립트는 이전 v0.2.3 폴더에서:
-- 실제 Supabase URL/Publishable Key가 들어간 config.js
-- .git 저장소/remote/history
+스크립트가 기존 v0.3.0 또는 v0.2.3에서:
+- 실제 PROD Supabase config
+- Git 저장소/remote/history
 
-를 v0.3.0으로 계승합니다.
+를 자동 탐색해 계승합니다.
 
-## 반드시 먼저 Supabase DB 업그레이드
+## PROD Supabase
+Supabase SQL Editor에서:
 
-Supabase Dashboard > SQL Editor에서:
+    supabase_upgrade_0.3.1.sql
 
-    supabase_upgrade_0.3.0.sql
+전체 실행.
 
-전체 내용을 한 번 실행합니다.
+기존 study_documents 데이터는 삭제되지 않습니다.
 
-이 SQL은 기존 study_documents 데이터를 삭제하지 않습니다.
+확인:
+- `study_documents/main` 기존 행 유지
+- `study_revision_log`에 `upgrade-baseline-v0.3.1`
+- `studynurse-images` Storage bucket 유지/생성
 
-실행 후 확인:
-- Table Editor > study_documents : 기존 main 행 유지
-- Table Editor > study_revision_log : upgrade-baseline-v0.3.0 행 존재
-- Storage > studynurse-images bucket 존재
+## DEV Supabase (선택)
+테스트 전용 Supabase 프로젝트를 하나 더 생성하고 같은:
 
-## 웹 버전 배포
+    supabase_upgrade_0.3.1.sql
 
-SQL 실행 후 WSL:
+을 실행합니다.
 
-    cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.3.0
+그 뒤 `config.dev.js`에 DEV Project URL / Publishable Key를 입력합니다.
+
+DEV 접속:
+
+    https://ows2509.github.io/studynurse/?dev=1
+
+상단에 빨간색 `DEV` 표시가 나옵니다.
+
+## 배포
+PROD SQL 적용 및 테스트 후:
+
     git add -A
-    git commit -m "StudyNurse v0.3.0"
+    git commit -m "StudyNurse v0.3.1"
     git push
 
-GitHub Pages는 기존 main / root 설정을 그대로 사용합니다.
-
-접속 주소도 변경 없음:
+GitHub Pages 주소는 변경 없습니다.
 
     https://ows2509.github.io/studynurse/
 
 ## 주의
-
-현재는 계정/PIN 없는 단일 사용자 구조입니다.
-Supabase 익명 쓰기가 허용되므로 주소가 널리 공개될 경우 추후 인증/RLS 강화가 필요합니다.
-
-Secret/service_role key는 config.js에 넣지 마세요.
+이미지 파일은 `업로드` 버튼을 누르는 순간 Supabase Storage에 파일 자체가 올라갑니다.
+다만 카드 DB의 이미지 참조와 순서는 `저장` 버튼을 눌렀을 때만 반영됩니다.
+편집을 취소하면 사용되지 않는 이미지 파일이 Storage에 남을 수 있으며, 이후 정리 기능을 추가할 수 있습니다.

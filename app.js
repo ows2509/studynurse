@@ -1,25 +1,31 @@
 
-const APP_VERSION = '0.3.0';
-const CFG = window.STUDYNURSE_CONFIG || {};
+const APP_VERSION = '0.3.1';
+
+const PROD_CFG = window.STUDYNURSE_CONFIG || {};
+const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
+const DEV_MODE = new URLSearchParams(location.search).get('dev') === '1';
+const CFG = DEV_MODE ? DEV_CFG : PROD_CFG;
 
 let state = null;
 let selectedCategory = null;
 let editing = false;
 let dirty = false;
-let autosaveTimer = null;
+let editSnapshot = null;
 let sb = null;
-let imageTargetCardId = null;
 let htmlTargetCardId = null;
 let categoryEditId = null;
-let forceRevisionOnNextSave = false;
+let imageTargetCardId = null;
+let pendingImageFile = null;
+let pendingImageBlob = null;
+let pendingImageMeta = null;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[m]));
 
-const cloudEnabled = () =>
-  !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
+const deepClone = obj => structuredClone ? structuredClone(obj) : JSON.parse(JSON.stringify(obj));
+const cloudEnabled = () => !!(CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase);
 
 function sanitizeRich(raw){
   const t = document.createElement('template');
@@ -38,13 +44,11 @@ function sanitizeRich(raw){
         el.removeAttribute(a.name);
         return;
       }
-
       if (['href','src','xlink:href'].includes(n) &&
           /^\s*(javascript|data:text\/html|vbscript):/i.test(v)) {
         el.removeAttribute(a.name);
         return;
       }
-
       if (n === 'style') {
         const safe = v.split(';').filter(p =>
           /^\s*(color|font-weight|font-style|text-decoration|font-size|background-color|text-align|margin|padding|border|width|max-width)\s*:/i.test(p)
@@ -54,7 +58,6 @@ function sanitizeRich(raw){
       }
     });
   });
-
   return t.innerHTML;
 }
 
@@ -65,7 +68,7 @@ function plainTextFromHtml(raw){
 }
 
 function makeId(prefix='id'){
-  if (crypto?.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
+  if (crypto && crypto.randomUUID) return `${prefix}-${crypto.randomUUID()}`;
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,10)}`;
 }
 
@@ -76,9 +79,33 @@ function slugify(s){
   return base || `category-${Date.now()}`;
 }
 
+function normalizeImageBlock(src, order=0){
+  if (typeof src === 'string') {
+    return {
+      id: makeId('img'),
+      type: 'image',
+      url: src,
+      displayWidth: 75,
+      align: 'center',
+      order
+    };
+  }
+  return {
+    id: src.id || makeId('img'),
+    type: 'image',
+    url: src.url || src.src || '',
+    displayWidth: Number(src.displayWidth || src.widthPercent || 75),
+    align: src.align || 'center',
+    originalWidth: src.originalWidth || null,
+    originalHeight: src.originalHeight || null,
+    fileSize: src.fileSize || null,
+    order: src.order ?? order
+  };
+}
+
 function migrateState(input){
-  // IMPORTANT: destructive reset is prohibited.
-  // Unknown legacy fields are intentionally retained.
+  // NON-DESTRUCTIVE:
+  // Existing fields are retained; new block fields are added only when missing.
   const data = input && typeof input === 'object' ? input : {};
   if (!Array.isArray(data.categories)) data.categories = [];
 
@@ -97,11 +124,71 @@ function migrateState(input){
       if (!Array.isArray(card.qbank)) card.qbank = [];
       if (typeof card.customHtml !== 'string') card.customHtml = '';
       if (card.order == null) card.order = i;
+
+      if (!Array.isArray(card.blocks)) {
+        const blocks = [];
+        card.bullets.forEach((txt, bi) => blocks.push({
+          id: makeId('txt'),
+          type: 'text',
+          content: txt,
+          order: blocks.length
+        }));
+
+        if (card.customHtml) {
+          blocks.push({
+            id: makeId('html'),
+            type: 'html',
+            content: card.customHtml,
+            order: blocks.length
+          });
+        }
+
+        card.images.forEach((img) => {
+          blocks.push(normalizeImageBlock(img, blocks.length));
+        });
+
+        card.blocks = blocks;
+      } else {
+        card.blocks = card.blocks.map((b, bi) => {
+          if (b.type === 'image') return normalizeImageBlock(b, bi);
+          return {
+            ...b,
+            id: b.id || makeId(b.type === 'html' ? 'html' : 'txt'),
+            type: b.type || 'text',
+            order: bi
+          };
+        });
+      }
+
+      syncLegacyFields(card);
     });
   });
 
   data.version = APP_VERSION;
   return data;
+}
+
+function syncLegacyFields(card){
+  card.bullets = (card.blocks||[])
+    .filter(b => b.type === 'text')
+    .map(b => b.content || '');
+
+  card.customHtml = (card.blocks||[])
+    .filter(b => b.type === 'html')
+    .map(b => b.content || '')
+    .join('<br>');
+
+  card.images = (card.blocks||[])
+    .filter(b => b.type === 'image')
+    .map(b => ({
+      id: b.id,
+      url: b.url,
+      displayWidth: b.displayWidth || 75,
+      align: b.align || 'center',
+      originalWidth: b.originalWidth || null,
+      originalHeight: b.originalHeight || null,
+      fileSize: b.fileSize || null
+    }));
 }
 
 function setSaveState(mode, label){
@@ -119,7 +206,7 @@ function setSaveState(mode, label){
 
 function openDb(){
   return new Promise((ok,no) => {
-    const r = indexedDB.open('StudyNurseWeb', 3);
+    const r = indexedDB.open('StudyNurseWeb', 4);
     r.onupgradeneeded = () => {
       if (!r.result.objectStoreNames.contains('kv')) r.result.createObjectStore('kv');
     };
@@ -149,21 +236,24 @@ async function idbPut(k,v){
   });
 }
 
+function localDatasetKey(){
+  return DEV_MODE ? 'dataset-dev' : 'dataset-prod';
+}
+
 async function loadData(){
   if (cloudEnabled()) {
     try {
       sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
-
       const {data,error} = await sb.from('study_documents')
         .select('payload')
-        .eq('doc_key', CFG.datasetKey || 'main')
+        .eq('doc_key', CFG.datasetKey || (DEV_MODE ? 'main-dev' : 'main'))
         .maybeSingle();
 
       if (error) throw error;
 
       if (data?.payload) {
         const migrated = migrateState(data.payload);
-        await idbPut('dataset', migrated);
+        await idbPut(localDatasetKey(), migrated);
         return migrated;
       }
     } catch(e) {
@@ -171,63 +261,50 @@ async function loadData(){
     }
   }
 
-  const local = await idbGet('dataset');
+  const local = await idbGet(localDatasetKey());
   if (local) return migrateState(local);
 
   const seed = await fetch('./data/seed.json', {cache:'no-store'}).then(r=>r.json());
   const migrated = migrateState(seed);
-  await idbPut('dataset', migrated);
+  await idbPut(localDatasetKey(), migrated);
   return migrated;
 }
 
-async function maybeCreateRevision(reason='autosave', force=false){
+async function createRevisionSnapshot(reason){
   if (!cloudEnabled()) return;
-
-  const last = Number(await idbGet('lastRevisionAt') || 0);
-  const now = Date.now();
-
-  // Prevent a full JSON snapshot on every keystroke.
-  if (!force && now - last < 10 * 60 * 1000) return;
-
   try {
     const {data,error} = await sb.from('study_documents')
       .select('payload')
-      .eq('doc_key', CFG.datasetKey || 'main')
+      .eq('doc_key', CFG.datasetKey)
       .maybeSingle();
 
     if (error || !data?.payload) return;
 
-    const {error:logError} = await sb.from('study_revision_log').insert({
-      doc_key: CFG.datasetKey || 'main',
+    await sb.from('study_revision_log').insert({
+      doc_key: CFG.datasetKey,
       payload: data.payload,
       source_version: data.payload.version || 'legacy',
       reason
     });
-
-    if (!logError) await idbPut('lastRevisionAt', now);
-    else console.warn('Revision log insert failed', logError);
   } catch(e) {
-    console.warn('Revision checkpoint failed', e);
+    console.warn('Revision snapshot failed', e);
   }
 }
 
-async function persistData(showAlert=false, reason='autosave'){
+async function persistData(showAlert=true){
   collectEditable();
   state = migrateState(state);
   setSaveState('saving','저장 중...');
 
   try {
-    await idbPut('dataset', state);
+    // Save local copy only when the user explicitly presses Save.
+    await idbPut(localDatasetKey(), state);
 
     if (cloudEnabled()) {
-      await maybeCreateRevision(
-        showAlert ? 'manual-save' : reason,
-        showAlert || forceRevisionOnNextSave
-      );
-      forceRevisionOnNextSave = false;
+      await createRevisionSnapshot(`manual-save-${APP_VERSION}`);
 
       const {error} = await sb.from('study_documents').upsert({
-        doc_key: CFG.datasetKey || 'main',
+        doc_key: CFG.datasetKey,
         payload: state,
         updated_at: new Date().toISOString()
       }, {onConflict:'doc_key'});
@@ -236,25 +313,23 @@ async function persistData(showAlert=false, reason='autosave'){
     }
 
     dirty = false;
+    editSnapshot = deepClone(state);
     $('#saveBtn').textContent = '저장';
     setSaveState('', cloudEnabled() ? '✓ 클라우드 저장됨' : '✓ 이 기기에 저장됨');
+
     if (showAlert) alert(cloudEnabled() ? '클라우드 저장 완료' : '이 기기에 저장 완료');
     return true;
   } catch(e) {
     setSaveState('error','저장 실패');
-    if (showAlert) alert('저장 실패: ' + (e.message || e));
-    else console.error(e);
+    alert('저장 실패: ' + (e.message || e));
     return false;
   }
 }
 
-function markDirty(reason='autosave', forceRevision=false){
+function markDirty(){
   dirty = true;
-  if (forceRevision) forceRevisionOnNextSave = true;
   $('#saveBtn').textContent = '저장 *';
-  setSaveState('saving','변경됨');
-  clearTimeout(autosaveTimer);
-  autosaveTimer = setTimeout(() => persistData(false, reason), 1200);
+  setSaveState('saving','저장되지 않은 변경');
 }
 
 function findCard(id){
@@ -269,27 +344,41 @@ function catById(id){
   return state.categories.find(c => c.id === id);
 }
 
+function findBlock(card, blockId){
+  return (card.blocks||[]).find(b => b.id === blockId);
+}
+
 function collectEditable(){
   document.querySelectorAll('[data-card][data-field]').forEach(el => {
     const card = findCard(el.dataset.card);
     if (!card) return;
 
-    const f = el.dataset.field;
-    if (f === 'title') card.title = sanitizeRich(el.innerHTML);
-    else if (f.startsWith('bullet:')) card.bullets[+f.split(':')[1]] = sanitizeRich(el.innerHTML);
-    else if (f.startsWith('vocab:')) card.vocab[+f.split(':')[1]] = sanitizeRich(el.innerHTML);
-    else if (f.startsWith('trans:')) card.translations[+f.split(':')[1]] = sanitizeRich(el.innerHTML);
+    const field = el.dataset.field;
+    if (field === 'title') card.title = sanitizeRich(el.innerHTML);
+
+    if (field === 'block') {
+      const block = findBlock(card, el.dataset.block);
+      if (block) block.content = sanitizeRich(el.innerHTML);
+    }
+
+    if (field.startsWith('vocab:')) {
+      card.vocab[+field.split(':')[1]] = sanitizeRich(el.innerHTML);
+    }
+    if (field.startsWith('trans:')) {
+      card.translations[+field.split(':')[1]] = sanitizeRich(el.innerHTML);
+    }
+    syncLegacyFields(card);
   });
 }
 
 function searchCard(c,q){
+  const blockText = (c.blocks||[]).map(b => b.type === 'image' ? '' : (b.content||''));
   const s = [
     c.title,
     ...(c.keywords||[]),
-    ...(c.bullets||[]),
+    ...blockText,
     ...(c.vocab||[]),
     ...(c.translations||[]),
-    c.customHtml || '',
     ...((c.qbank||[]).flatMap(x => [
       x.date, x.title, ...((x.items||[]).map(i=>i.content))
     ]))
@@ -298,27 +387,67 @@ function searchCard(c,q){
   return plainTextFromHtml(s).toLowerCase().includes(q);
 }
 
-function renderImages(c){
-  if (!(c.images||[]).length) return '';
-  return `<div class="images">${
-    c.images.map((src,i)=>`
-      <span class="card-image-wrap">
-        <img src="${esc(src)}" loading="lazy">
-        ${editing ? `<button class="img-delete" data-del-image="${c.id}" data-image-index="${i}" title="이미지 삭제">✕</button>` : ''}
-      </span>`).join('')
-  }</div>`;
+function renderBlock(card, block){
+  const drag = editing
+    ? `<button class="drag-handle" type="button" data-drag-card="${card.id}" data-drag-block="${block.id}" aria-label="블록 이동">⋮⋮</button>`
+    : '';
+
+  if (block.type === 'image') {
+    const width = Math.max(25, Math.min(100, Number(block.displayWidth || 75)));
+    const align = ['left','center','right'].includes(block.align) ? block.align : 'center';
+    const margin = align === 'left' ? '0 auto 0 0' : align === 'right' ? '0 0 0 auto' : '0 auto';
+
+    return `
+      <div class="content-block image-block" data-card-id="${card.id}" data-block-id="${block.id}">
+        ${drag}
+        <div class="image-stage" style="width:${width}%;margin:${margin}">
+          <img src="${esc(block.url)}" loading="lazy" draggable="false" alt="학습 이미지">
+        </div>
+        <div class="image-caption-tools">
+          <label>크기
+            <select data-image-width="${card.id}" data-block="${block.id}">
+              ${[25,50,75,100].map(v=>`<option value="${v}" ${v===width?'selected':''}>${v}%</option>`).join('')}
+            </select>
+          </label>
+          <label>정렬
+            <select data-image-align="${card.id}" data-block="${block.id}">
+              <option value="left" ${align==='left'?'selected':''}>왼쪽</option>
+              <option value="center" ${align==='center'?'selected':''}>가운데</option>
+              <option value="right" ${align==='right'?'selected':''}>오른쪽</option>
+            </select>
+          </label>
+          <button class="block-delete" type="button" data-delete-block="${card.id}" data-block="${block.id}">이미지 삭제</button>
+        </div>
+      </div>`;
+  }
+
+  if (block.type === 'html') {
+    return `
+      <div class="content-block" data-card-id="${card.id}" data-block-id="${block.id}">
+        ${drag}
+        <div class="html-block">${sanitizeRich(block.content||'')}</div>
+        <div class="image-caption-tools">
+          <button class="btn btn-soft" type="button" data-edit-html="${card.id}" data-block="${block.id}">&lt;/&gt; HTML 편집</button>
+          <button class="block-delete" type="button" data-delete-block="${card.id}" data-block="${block.id}">HTML 삭제</button>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="content-block" data-card-id="${card.id}" data-block-id="${block.id}">
+      ${drag}
+      <div class="text-block">
+        <span class="dot">•</span>
+        <div ${editing ? `class="editable" contenteditable="true" data-card="${card.id}" data-field="block" data-block="${block.id}"` : ''}>${sanitizeRich(block.content||'')}</div>
+        ${editing ? `<button class="block-delete" type="button" data-delete-block="${card.id}" data-block="${block.id}">삭제</button>` : ''}
+      </div>
+    </div>`;
 }
 
 function renderCard(c){
   const titleAttrs = editing
     ? `class="card-title editable" contenteditable="true" data-card="${c.id}" data-field="title"`
     : `class="card-title"`;
-
-  const bullets = (c.bullets||[]).map((x,i)=>`
-    <div class="bullet">
-      <span class="dot">•</span>
-      <div ${editing ? `class="editable" contenteditable="true" data-card="${c.id}" data-field="bullet:${i}"` : ''}>${sanitizeRich(x)}</div>
-    </div>`).join('');
 
   const vocab = (c.vocab||[]).length ? `
     <div class="panel">
@@ -352,9 +481,6 @@ function renderCard(c){
       </div>`).join('')}
     </div>` : '';
 
-  const custom = c.customHtml
-    ? `<div class="custom-html">${sanitizeRich(c.customHtml)}</div>` : '';
-
   return `
     <article class="card" aria-editing="${editing}">
       <div class="card-head">
@@ -364,9 +490,9 @@ function renderCard(c){
 
       <div class="card-grid">
         <div>
-          <div class="bullets">${bullets}</div>
-          ${custom}
-          ${renderImages(c)}
+          <div class="content-flow" data-flow-card="${c.id}">
+            ${(c.blocks||[]).map(b=>renderBlock(c,b)).join('')}
+          </div>
         </div>
         <aside class="side">${vocab}${trans}</aside>
       </div>
@@ -374,11 +500,11 @@ function renderCard(c){
       ${qb}
 
       <div class="editbar">
-        <button class="btn btn-soft" data-add-bullet="${c.id}">+ 개념</button>
+        <button class="btn btn-soft" data-add-text="${c.id}">+ 개념</button>
         <button class="btn btn-soft" data-add-vocab="${c.id}">+ 단어</button>
         <button class="btn btn-soft" data-add-trans="${c.id}">+ 번역</button>
         <button class="btn btn-soft" data-add-image="${c.id}">+ 이미지</button>
-        <button class="btn btn-soft" data-edit-html="${c.id}">&lt;/&gt; HTML</button>
+        <button class="btn btn-soft" data-add-html="${c.id}">&lt;/&gt; HTML</button>
         <button class="btn btn-danger" data-del-card="${c.id}">카드 삭제</button>
       </div>
     </article>`;
@@ -402,9 +528,7 @@ function render(){
     };
   });
 
-  if ($('#addCategoryBtn')) {
-    $('#addCategoryBtn').onclick = () => openCategoryModal();
-  }
+  if ($('#addCategoryBtn')) $('#addCategoryBtn').onclick = () => openCategoryModal();
 
   const cat = catById(selectedCategory) || state.categories[0];
   if (!cat) {
@@ -419,85 +543,160 @@ function render(){
     <div class="section-head">
       <h2 class="section-title">${esc(cat.title || cat.subLabel || '')}</h2>
       <div class="section-subtitle">${esc(cat.subtitle || '')}</div>
+      ${editing && dirty ? `<div class="unsaved-warning">저장되지 않은 변경사항이 있습니다.</div>` : ''}
       <div class="category-tools">
         <button class="btn btn-soft" id="renameCategoryBtn">카테고리 수정</button>
         <button class="btn btn-danger" id="deleteCategoryBtn">카테고리 삭제</button>
       </div>
     </div>
+    <div class="cards">${cards.length ? cards.map(renderCard).join('') : '<div class="empty">검색 결과가 없습니다.</div>'}</div>`;
 
-    <div class="cards">
-      ${cards.length ? cards.map(renderCard).join('') : '<div class="empty">검색 결과가 없습니다.</div>'}
-    </div>`;
+  bindDynamic();
+}
 
+function bindDynamic(){
   if (editing) {
     document.querySelectorAll('.editable').forEach(el=>{
-      el.addEventListener('input', () => markDirty('text-edit'));
+      el.addEventListener('input', markDirty);
       el.addEventListener('blur', () => {
         collectEditable();
-        markDirty('text-edit');
+        markDirty();
       });
     });
 
-    document.querySelectorAll('[data-del-card]').forEach(b =>
-      b.onclick = () => deleteCard(b.dataset.delCard));
-    document.querySelectorAll('[data-add-bullet]').forEach(b =>
-      b.onclick = () => addBullet(b.dataset.addBullet));
-    document.querySelectorAll('[data-add-vocab]').forEach(b =>
-      b.onclick = () => addVocab(b.dataset.addVocab));
-    document.querySelectorAll('[data-add-trans]').forEach(b =>
-      b.onclick = () => addTrans(b.dataset.addTrans));
-    document.querySelectorAll('[data-add-image]').forEach(b =>
-      b.onclick = () => chooseImage(b.dataset.addImage));
-    document.querySelectorAll('[data-edit-html]').forEach(b =>
-      b.onclick = () => openHtmlEditor(b.dataset.editHtml));
-    document.querySelectorAll('[data-del-image]').forEach(b =>
-      b.onclick = () => deleteImage(b.dataset.delImage, Number(b.dataset.imageIndex)));
+    document.querySelectorAll('[data-add-text]').forEach(b => b.onclick = () => addText(b.dataset.addText));
+    document.querySelectorAll('[data-add-vocab]').forEach(b => b.onclick = () => addVocab(b.dataset.addVocab));
+    document.querySelectorAll('[data-add-trans]').forEach(b => b.onclick = () => addTrans(b.dataset.addTrans));
+    document.querySelectorAll('[data-add-image]').forEach(b => b.onclick = () => chooseImage(b.dataset.addImage));
+    document.querySelectorAll('[data-add-html]').forEach(b => b.onclick = () => openHtmlEditor(b.dataset.addHtml));
+    document.querySelectorAll('[data-edit-html]').forEach(b => b.onclick = () => openHtmlEditor(b.dataset.editHtml, b.dataset.block));
+    document.querySelectorAll('[data-delete-block]').forEach(b => b.onclick = () => deleteBlock(b.dataset.deleteBlock, b.dataset.block));
+    document.querySelectorAll('[data-del-card]').forEach(b => b.onclick = () => deleteCard(b.dataset.delCard));
 
-    $('#renameCategoryBtn').onclick = () => openCategoryModal(cat.id);
-    $('#deleteCategoryBtn').onclick = () => deleteCategory(cat.id);
+    document.querySelectorAll('[data-image-width]').forEach(sel => {
+      sel.onchange = () => {
+        const card = findCard(sel.dataset.imageWidth);
+        const block = findBlock(card, sel.dataset.block);
+        if (block) {
+          block.displayWidth = Number(sel.value);
+          markDirty();
+          render();
+        }
+      };
+    });
+
+    document.querySelectorAll('[data-image-align]').forEach(sel => {
+      sel.onchange = () => {
+        const card = findCard(sel.dataset.imageAlign);
+        const block = findBlock(card, sel.dataset.block);
+        if (block) {
+          block.align = sel.value;
+          markDirty();
+          render();
+        }
+      };
+    });
+
+    const cat = catById(selectedCategory);
+    if ($('#renameCategoryBtn')) $('#renameCategoryBtn').onclick = () => openCategoryModal(cat.id);
+    if ($('#deleteCategoryBtn')) $('#deleteCategoryBtn').onclick = () => deleteCategory(cat.id);
+
+    initDragHandles();
   }
 
   document.querySelectorAll('.qtoggle').forEach(b=>{
     b.onclick = () => b.nextElementSibling.classList.toggle('open');
   });
+
+  document.querySelectorAll('img').forEach(img=>{
+    img.addEventListener('dragstart', e => e.preventDefault());
+  });
+}
+
+function startEdit(){
+  editSnapshot = deepClone(state);
+  editing = true;
+  dirty = false;
+  document.body.classList.add('editing');
+  $('#saveBtn').hidden = false;
+  $('#editBtn').textContent = '편집 종료';
+  $('#modeBadge').textContent = 'EDIT';
+  setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
+  render();
+}
+
+function tryExitEdit(){
+  collectEditable();
+
+  if (dirty) {
+    const ok = confirm(
+      '저장되지 않은 변경사항이 있습니다.\n\n편집을 종료하면 작업한 내용이 저장되지 않습니다.\n저장하지 않고 편집을 종료하시겠습니까?'
+    );
+    if (!ok) return;
+
+    state = deepClone(editSnapshot);
+    dirty = false;
+  }
+
+  editing = false;
+  editSnapshot = null;
+  document.body.classList.remove('editing');
+  $('#saveBtn').hidden = true;
+  $('#editBtn').textContent = '편집';
+  $('#modeBadge').textContent = 'VIEW';
+  $('#saveBtn').textContent = '저장';
+  setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
+  render();
 }
 
 function toggleEdit(){
+  if (editing) tryExitEdit();
+  else startEdit();
+}
+
+function addText(id){
   collectEditable();
-  editing = !editing;
-  document.body.classList.toggle('editing', editing);
-  $('#saveBtn').hidden = !editing;
-  $('#editBtn').textContent = editing ? '편집 종료' : '편집';
-  $('#modeBadge').textContent = editing ? 'EDIT' : 'VIEW';
-  if (!editing && dirty) persistData(false,'edit-exit');
+  const card = findCard(id);
+  card.blocks.push({id:makeId('txt'),type:'text',content:'새 개념 입력',order:card.blocks.length});
+  syncLegacyFields(card);
+  markDirty();
   render();
 }
 
-function addBullet(id){
-  collectEditable();
-  findCard(id).bullets.push('새 개념 입력');
-  markDirty('add-bullet');
-  render();
-}
 function addVocab(id){
   collectEditable();
   findCard(id).vocab.push('새 단어 - 뜻');
-  markDirty('add-vocab');
+  markDirty();
   render();
 }
+
 function addTrans(id){
   collectEditable();
   findCard(id).translations.push('새 문장 / 번역');
-  markDirty('add-translation');
+  markDirty();
+  render();
+}
+
+function deleteBlock(cardId, blockId){
+  const card = findCard(cardId);
+  if (!card) return;
+  const block = findBlock(card, blockId);
+  const label = block?.type === 'image' ? '이미지' : block?.type === 'html' ? 'HTML 블록' : '개념 문단';
+  if (!confirm(`${label}을 삭제하시겠습니까?`)) return;
+
+  card.blocks = card.blocks.filter(b => b.id !== blockId);
+  card.blocks.forEach((b,i)=>b.order=i);
+  syncLegacyFields(card);
+  markDirty();
   render();
 }
 
 function deleteCard(id){
-  if (!confirm('이 카드를 삭제하시겠습니까? 삭제 전 상태는 revision log에 보존됩니다.')) return;
+  if (!confirm('이 카드를 삭제하시겠습니까?')) return;
   collectEditable();
   const c = catById(selectedCategory);
   c.cards = c.cards.filter(x => x.id !== id);
-  markDirty('delete-card', true);
+  markDirty();
   render();
 }
 
@@ -511,11 +710,16 @@ function createCard(){
     return;
   }
 
-  cat.cards.push({
+  const blocks = $('#newBullets').value.split('\n')
+    .map(s=>s.trim()).filter(Boolean)
+    .map((s,i)=>({id:makeId('txt'),type:'text',content:esc(s),order:i}));
+
+  const card = {
     id: makeId(cat.id || 'card'),
     title: esc(title),
     keywords: $('#newKeywords').value.split(',').map(s=>s.trim()).filter(Boolean),
-    bullets: $('#newBullets').value.split('\n').map(s=>esc(s.trim())).filter(Boolean),
+    blocks,
+    bullets: [],
     vocab: [],
     translations: [],
     images: [],
@@ -523,20 +727,21 @@ function createCard(){
     customHtml: '',
     order: cat.cards.length,
     updatedAt: new Date().toISOString()
-  });
+  };
+  syncLegacyFields(card);
+  cat.cards.push(card);
 
   $('#newTitle').value = '';
   $('#newKeywords').value = '';
   $('#newBullets').value = '';
   $('#cardModal').classList.remove('open');
-  markDirty('create-card');
+  markDirty();
   render();
 }
 
 function openCategoryModal(id=null){
   categoryEditId = id;
   const cat = id ? catById(id) : null;
-
   $('#categoryModalTitle').textContent = cat ? '카테고리 수정' : '새 카테고리';
   $('#categoryName').value = cat ? (cat.subLabel || cat.title || '') : '';
   $('#categorySubtitle').value = cat ? (cat.subtitle || '') : '';
@@ -547,7 +752,6 @@ function openCategoryModal(id=null){
 function saveCategory(){
   const name = $('#categoryName').value.trim();
   const subtitle = $('#categorySubtitle').value.trim();
-
   if (!name) {
     alert('카테고리 이름을 입력하세요.');
     return;
@@ -558,53 +762,57 @@ function saveCategory(){
     cat.subLabel = name;
     cat.title = name;
     cat.subtitle = subtitle;
-    markDirty('rename-category');
   } else {
     let idBase = slugify(name);
     let id = `custom-${idBase}`;
     while (catById(id)) id = `custom-${idBase}-${Date.now()}`;
 
-    const cat = {
+    state.categories.push({
       id,
-      main: 'Custom',
-      mainLabel: 'Custom',
-      sub: id,
-      subLabel: name,
-      title: name,
+      main:'Custom',
+      mainLabel:'Custom',
+      sub:id,
+      subLabel:name,
+      title:name,
       subtitle,
-      order: state.categories.length,
-      cards: []
-    };
-    state.categories.push(cat);
+      order:state.categories.length,
+      cards:[]
+    });
     selectedCategory = id;
-    markDirty('create-category');
   }
 
   $('#categoryModal').classList.remove('open');
   categoryEditId = null;
+  markDirty();
   render();
 }
 
 function deleteCategory(id){
   const cat = catById(id);
   if (!cat) return;
+  if (!confirm(`"${cat.subLabel || cat.title}" 카테고리와 내부 카드 ${cat.cards.length}개를 삭제하시겠습니까?`)) return;
 
-  if (!confirm(`"${cat.subLabel || cat.title}" 카테고리와 내부 카드 ${cat.cards.length}개를 삭제하시겠습니까?\n삭제 전 상태는 revision log에 보존됩니다.`)) return;
-
-  const idx = state.categories.findIndex(c => c.id === id);
-  state.categories = state.categories.filter(c => c.id !== id);
-  selectedCategory = state.categories[Math.max(0, idx-1)]?.id || state.categories[0]?.id || null;
-  markDirty('delete-category', true);
+  const idx = state.categories.findIndex(c=>c.id===id);
+  state.categories = state.categories.filter(c=>c.id!==id);
+  selectedCategory = state.categories[Math.max(0,idx-1)]?.id || state.categories[0]?.id || null;
+  markDirty();
   render();
 }
 
-function openHtmlEditor(cardId){
+function openHtmlEditor(cardId, blockId=null){
   const card = findCard(cardId);
   if (!card) return;
 
+  let block = blockId ? findBlock(card, blockId) : null;
+  if (!block) {
+    block = {id:makeId('html'),type:'html',content:'',order:card.blocks.length,_new:true};
+  }
+
   htmlTargetCardId = cardId;
-  $('#htmlEditor').value = card.customHtml || '';
-  $('#htmlPreview').innerHTML = sanitizeRich(card.customHtml || '');
+  $('#htmlEditor').dataset.blockId = block.id;
+  $('#htmlEditor').dataset.isNew = block._new ? '1' : '0';
+  $('#htmlEditor').value = block.content || '';
+  $('#htmlPreview').innerHTML = sanitizeRich(block.content || '');
   $('#htmlModal').classList.add('open');
 }
 
@@ -616,105 +824,324 @@ function applyHtml(){
   const card = findCard(htmlTargetCardId);
   if (!card) return;
 
-  card.customHtml = sanitizeRich($('#htmlEditor').value);
+  const blockId = $('#htmlEditor').dataset.blockId;
+  let block = findBlock(card, blockId);
+  if (!block) {
+    block = {id:blockId,type:'html',content:'',order:card.blocks.length};
+    card.blocks.push(block);
+  }
+  block.content = sanitizeRich($('#htmlEditor').value);
+  syncLegacyFields(card);
+
   $('#htmlModal').classList.remove('open');
   htmlTargetCardId = null;
-  markDirty('html-edit');
+  markDirty();
   render();
 }
 
 function chooseImage(cardId){
   if (!cloudEnabled()) {
-    alert('이미지 공유 저장은 Supabase 연결이 필요합니다.');
+    alert(DEV_MODE
+      ? 'DEV DB가 연결되지 않았습니다. config.dev.js에 테스트 Supabase 정보를 입력하세요.'
+      : '이미지 공유 저장은 Supabase 연결이 필요합니다.');
     return;
   }
+
   imageTargetCardId = cardId;
   $('#imageInput').value = '';
   $('#imageInput').click();
 }
 
-async function uploadSelectedImage(file){
-  if (!file || !imageTargetCardId) return;
-  if (!file.type.startsWith('image/')) {
-    alert('이미지 파일만 업로드할 수 있습니다.');
-    return;
+async function fileToImage(file){
+  return new Promise((resolve,reject)=>{
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('이미지를 읽을 수 없습니다.'));
+    };
+    img.src = url;
+  });
+}
+
+function formatBytes(n){
+  if (!Number.isFinite(n)) return '-';
+  if (n < 1024) return `${n} B`;
+  if (n < 1024*1024) return `${(n/1024).toFixed(1)} KB`;
+  return `${(n/1024/1024).toFixed(2)} MB`;
+}
+
+function clampCropValues(){
+  const L = $('#cropLeft'), R = $('#cropRight'), T = $('#cropTop'), B = $('#cropBottom');
+  if (+L.value + +R.value > 80) R.value = Math.max(0, 80 - +L.value);
+  if (+T.value + +B.value > 80) B.value = Math.max(0, 80 - +T.value);
+
+  $('#cropLeftValue').textContent = `${L.value}%`;
+  $('#cropRightValue').textContent = `${R.value}%`;
+  $('#cropTopValue').textContent = `${T.value}%`;
+  $('#cropBottomValue').textContent = `${B.value}%`;
+}
+
+function profileSettings(){
+  const p = $('#imageProfile').value;
+  if (p === 'original') return {max:null, quality:1, original:true};
+  if (p === 'high') return {max:2560, quality:.90};
+  if (p === 'compact') return {max:1024, quality:.74};
+  return {max:1600, quality:.84};
+}
+
+async function processPendingImage(){
+  if (!pendingImageFile) return;
+
+  clampCropValues();
+  const img = await fileToImage(pendingImageFile);
+  const L = +$('#cropLeft').value / 100;
+  const R = +$('#cropRight').value / 100;
+  const T = +$('#cropTop').value / 100;
+  const B = +$('#cropBottom').value / 100;
+  const rotate = +$('#imageRotate').value;
+  const prof = profileSettings();
+
+  const sx = Math.round(img.naturalWidth * L);
+  const sy = Math.round(img.naturalHeight * T);
+  const sw = Math.max(1, Math.round(img.naturalWidth * (1-L-R)));
+  const sh = Math.max(1, Math.round(img.naturalHeight * (1-T-B)));
+
+  let targetW = sw, targetH = sh;
+  if (prof.max && Math.max(sw,sh) > prof.max) {
+    const scale = prof.max / Math.max(sw,sh);
+    targetW = Math.max(1, Math.round(sw * scale));
+    targetH = Math.max(1, Math.round(sh * scale));
   }
-  if (file.size > 10 * 1024 * 1024) {
-    alert('이미지는 10MB 이하로 사용하세요.');
-    return;
+
+  const rotated = rotate === 90 || rotate === 270;
+  const canvas = document.createElement('canvas');
+  canvas.width = rotated ? targetH : targetW;
+  canvas.height = rotated ? targetW : targetH;
+
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  if (rotate === 90) {
+    ctx.translate(canvas.width,0);
+    ctx.rotate(Math.PI/2);
+  } else if (rotate === 180) {
+    ctx.translate(canvas.width,canvas.height);
+    ctx.rotate(Math.PI);
+  } else if (rotate === 270) {
+    ctx.translate(0,canvas.height);
+    ctx.rotate(-Math.PI/2);
   }
+
+  ctx.drawImage(img, sx,sy,sw,sh, 0,0,targetW,targetH);
+  ctx.restore();
+
+  const mime = prof.original && L===0 && R===0 && T===0 && B===0 && rotate===0
+    ? pendingImageFile.type
+    : 'image/webp';
+
+  if (prof.original && L===0 && R===0 && T===0 && B===0 && rotate===0) {
+    pendingImageBlob = pendingImageFile;
+  } else {
+    pendingImageBlob = await new Promise(resolve => canvas.toBlob(resolve, mime, prof.quality));
+    if (!pendingImageBlob) {
+      pendingImageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', prof.quality));
+    }
+  }
+
+  const previewUrl = URL.createObjectURL(pendingImageBlob);
+  const oldUrl = $('#imagePreview').dataset.objectUrl;
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+  $('#imagePreview').dataset.objectUrl = previewUrl;
+  $('#imagePreview').src = previewUrl;
+
+  pendingImageMeta = {
+    originalWidth: img.naturalWidth,
+    originalHeight: img.naturalHeight,
+    processedWidth: canvas.width,
+    processedHeight: canvas.height,
+    originalSize: pendingImageFile.size,
+    processedSize: pendingImageBlob.size
+  };
+
+  $('#imageInfo').textContent =
+    `원본 ${img.naturalWidth}×${img.naturalHeight} / ${formatBytes(pendingImageFile.size)} → ` +
+    `업로드 ${canvas.width}×${canvas.height} / 약 ${formatBytes(pendingImageBlob.size)}`;
+}
+
+async function openImageSettings(file){
+  pendingImageFile = file;
+  pendingImageBlob = null;
+  pendingImageMeta = null;
+
+  ['cropLeft','cropRight','cropTop','cropBottom'].forEach(id => $( '#' + id ).value = 0);
+  $('#imageProfile').value = 'standard';
+  $('#imageRotate').value = '0';
+  $('#imageDisplayWidth').value = '75';
+  clampCropValues();
+
+  $('#imageModal').classList.add('open');
+  await processPendingImage();
+}
+
+async function uploadPreparedImage(){
+  if (!pendingImageBlob || !imageTargetCardId) return;
 
   const card = findCard(imageTargetCardId);
   if (!card) return;
 
+  $('#uploadImageBtn').disabled = true;
   setSaveState('saving','이미지 업로드 중...');
-  document.body.classList.add('uploading');
 
   try {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,'_');
-    const path = `uploads/${Date.now()}_${makeId('img')}_${safeName}`;
+    const ext = pendingImageBlob.type === 'image/png' ? 'png'
+      : pendingImageBlob.type === 'image/jpeg' ? 'jpg' : 'webp';
+    const path = `uploads/${Date.now()}_${makeId('img')}.${ext}`;
 
     const {error} = await sb.storage
       .from('studynurse-images')
-      .upload(path, file, {cacheControl:'3600', upsert:false, contentType:file.type});
+      .upload(path, pendingImageBlob, {
+        cacheControl:'3600',
+        upsert:false,
+        contentType:pendingImageBlob.type
+      });
 
     if (error) throw error;
 
     const {data} = sb.storage.from('studynurse-images').getPublicUrl(path);
     if (!data?.publicUrl) throw new Error('Public URL 생성 실패');
 
-    card.images.push(data.publicUrl);
-    markDirty('add-image');
-    await persistData(false,'add-image');
+    card.blocks.push({
+      id:makeId('img'),
+      type:'image',
+      url:data.publicUrl,
+      displayWidth:Number($('#imageDisplayWidth').value),
+      align:'center',
+      originalWidth:pendingImageMeta?.originalWidth || null,
+      originalHeight:pendingImageMeta?.originalHeight || null,
+      fileSize:pendingImageBlob.size,
+      order:card.blocks.length
+    });
+    syncLegacyFields(card);
+
+    $('#imageModal').classList.remove('open');
+    pendingImageFile = pendingImageBlob = pendingImageMeta = null;
+    imageTargetCardId = null;
+
+    // IMPORTANT: image file itself is uploaded immediately, but card/DB references are NOT saved
+    // until the user presses Save. An unused uploaded file may remain if editing is discarded.
+    markDirty();
+    setSaveState('saving','저장되지 않은 변경');
     render();
   } catch(e) {
     setSaveState('error','이미지 업로드 실패');
     alert('이미지 업로드 실패: ' + (e.message || e));
   } finally {
-    document.body.classList.remove('uploading');
-    imageTargetCardId = null;
+    $('#uploadImageBtn').disabled = false;
   }
 }
 
-function storagePathFromPublicUrl(url){
-  const marker = '/storage/v1/object/public/studynurse-images/';
-  const idx = String(url||'').indexOf(marker);
-  return idx >= 0 ? decodeURIComponent(String(url).slice(idx + marker.length)) : null;
+function cancelImageModal(){
+  const oldUrl = $('#imagePreview').dataset.objectUrl;
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+  $('#imagePreview').dataset.objectUrl = '';
+  $('#imageModal').classList.remove('open');
+  pendingImageFile = pendingImageBlob = pendingImageMeta = null;
+  imageTargetCardId = null;
 }
 
-async function deleteImage(cardId,index){
-  const card = findCard(cardId);
-  if (!card || !card.images[index]) return;
-  if (!confirm('이 이미지를 카드에서 삭제하시겠습니까?')) return;
+function initDragHandles(){
+  document.querySelectorAll('.drag-handle').forEach(handle=>{
+    handle.addEventListener('pointerdown', onDragStart);
+  });
+}
 
-  const url = card.images[index];
-  const path = storagePathFromPublicUrl(url);
+let dragState = null;
 
-  // Existing packaged images have no storage path; only remove reference.
-  if (cloudEnabled() && path) {
-    try {
-      const {error} = await sb.storage.from('studynurse-images').remove([path]);
-      if (error) console.warn('Storage file delete failed; reference will still be removed.', error);
-    } catch(e) {
-      console.warn(e);
+function onDragStart(e){
+  if (!editing) return;
+  const handle = e.currentTarget;
+  const blockEl = handle.closest('.content-block');
+  const flow = blockEl?.closest('.content-flow');
+  if (!blockEl || !flow) return;
+
+  e.preventDefault();
+  handle.setPointerCapture?.(e.pointerId);
+
+  dragState = {
+    pointerId:e.pointerId,
+    handle,
+    blockEl,
+    flow,
+    cardId:handle.dataset.dragCard
+  };
+  blockEl.classList.add('dragging');
+
+  handle.addEventListener('pointermove', onDragMove);
+  handle.addEventListener('pointerup', onDragEnd);
+  handle.addEventListener('pointercancel', onDragEnd);
+}
+
+function onDragMove(e){
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+  e.preventDefault();
+
+  const candidates = [...dragState.flow.querySelectorAll('.content-block')]
+    .filter(el => el !== dragState.blockEl);
+
+  let target = null;
+  for (const el of candidates) {
+    const r = el.getBoundingClientRect();
+    if (e.clientY >= r.top && e.clientY <= r.bottom) {
+      target = el;
+      const before = e.clientY < r.top + r.height/2;
+      dragState.flow.insertBefore(
+        dragState.blockEl,
+        before ? el : el.nextSibling
+      );
+      break;
     }
   }
 
-  card.images.splice(index,1);
-  markDirty('delete-image', true);
+  candidates.forEach(el => el.classList.toggle('drag-over', el === target));
+}
+
+function onDragEnd(e){
+  if (!dragState || e.pointerId !== dragState.pointerId) return;
+
+  const {handle,blockEl,flow,cardId} = dragState;
+  handle.removeEventListener('pointermove', onDragMove);
+  handle.removeEventListener('pointerup', onDragEnd);
+  handle.removeEventListener('pointercancel', onDragEnd);
+
+  blockEl.classList.remove('dragging');
+  flow.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));
+
+  const card = findCard(cardId);
+  if (card) {
+    const ids = [...flow.querySelectorAll('.content-block')].map(el=>el.dataset.blockId);
+    const map = new Map(card.blocks.map(b=>[b.id,b]));
+    card.blocks = ids.map((id,i)=>({...map.get(id),order:i})).filter(Boolean);
+    syncLegacyFields(card);
+    markDirty();
+  }
+
+  dragState = null;
   render();
 }
 
 function bind(){
   $('#searchInput').addEventListener('input', render);
   $('#editBtn').onclick = toggleEdit;
-  $('#saveBtn').onclick = () => persistData(true,'manual-save');
+  $('#saveBtn').onclick = () => persistData(true);
 
   $('#addCardBtn').onclick = () => {
-    if (!editing) toggleEdit();
+    if (!editing) startEdit();
     $('#cardModal').classList.add('open');
   };
-
   $('#closeCardBtn').onclick = () => $('#cardModal').classList.remove('open');
   $('#createCardBtn').onclick = createCard;
 
@@ -734,8 +1161,20 @@ function bind(){
 
   $('#imageInput').addEventListener('change', e => {
     const f = e.target.files?.[0];
-    if (f) uploadSelectedImage(f);
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return alert('이미지 파일만 사용할 수 있습니다.');
+    if (f.size > 30 * 1024 * 1024) return alert('원본 이미지는 30MB 이하로 사용하세요.');
+    openImageSettings(f).catch(err => alert(err.message || err));
   });
+
+  ['imageProfile','imageRotate','cropLeft','cropRight','cropTop','cropBottom'].forEach(id=>{
+    $('#' + id).addEventListener('input', () => {
+      processPendingImage().catch(console.error);
+    });
+  });
+
+  $('#uploadImageBtn').onclick = uploadPreparedImage;
+  $('#cancelImageBtn').onclick = cancelImageModal;
 }
 
 async function init(){
@@ -743,14 +1182,20 @@ async function init(){
     sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
   }
 
-  state = await loadData();
-  state = migrateState(state);
+  state = migrateState(await loadData());
   selectedCategory = state.categories[0]?.id || null;
+
+  $('#envBadge').textContent = DEV_MODE ? 'DEV' : 'PROD';
+  $('#envBadge').classList.toggle('dev', DEV_MODE);
 
   bind();
   render();
 
-  setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
+  if (DEV_MODE && !cloudEnabled()) {
+    setSaveState('', 'DEV · 로컬 저장');
+  } else {
+    setSaveState('', cloudEnabled() ? `${DEV_MODE?'DEV':'PROD'} · 클라우드 연결` : '이 기기에 저장');
+  }
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
@@ -758,16 +1203,13 @@ async function init(){
 }
 
 window.addEventListener('beforeunload', e => {
-  if (dirty) {
-    collectEditable();
-    idbPut('dataset', migrateState(state)).catch(()=>{});
-    e.preventDefault();
-    e.returnValue = '';
-  }
+  if (!dirty) return;
+  e.preventDefault();
+  e.returnValue = '';
 });
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && dirty) persistData(false,'visibility-hidden');
+  // v0.3.1 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

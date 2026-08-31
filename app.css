@@ -78,7 +78,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* v0.3.0 */
+/* legacy styles */
 .tab-add{
   border:2px dashed var(--pinkBorder);background:#fff;color:var(--pinkDark);
   min-width:42px;font-size:1.05rem
@@ -117,4 +117,95 @@ button,input,textarea,select{font:inherit}
   .tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin}
   .tab{flex:0 0 auto}
   .html-modalbox{max-height:92vh}
+}
+
+
+/* StudyNurse v0.3.1 */
+.envbadge{
+  font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
+  background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
+}
+.envbadge.dev{background:#fff1f2;color:#be123c;border-color:#fecdd3}
+.tab-add{
+  border:2px dashed var(--pinkBorder);background:#fff;color:var(--pinkDark);
+  min-width:42px;font-size:1.05rem
+}
+.category-tools{display:none;gap:6px;margin-top:10px;flex-wrap:wrap}
+.editing .category-tools{display:flex}
+.unsaved-warning{
+  margin-top:8px;padding:7px 9px;border:1px solid #fed7aa;border-radius:9px;
+  background:#fff7ed;color:#9a3412;font-size:.78rem;font-weight:700
+}
+
+.content-flow{display:flex;flex-direction:column;gap:6px}
+.content-block{
+  position:relative;border-radius:9px;transition:background .12s ease,opacity .12s ease,transform .12s ease;
+}
+.editing .content-block{padding-left:30px}
+.content-block.dragging{opacity:.45;background:var(--pinkSoft);transform:scale(.995)}
+.content-block.drag-over{outline:2px dashed var(--pink)}
+.drag-handle{
+  display:none;position:absolute;left:0;top:3px;width:26px;height:30px;
+  align-items:center;justify-content:center;border:0;border-radius:7px;
+  background:var(--brownSoft);color:var(--brown);font-size:1rem;font-weight:900;
+  cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none
+}
+.editing .drag-handle{display:flex}
+.drag-handle:active{cursor:grabbing}
+.text-block{display:flex;gap:7px;line-height:1.35;min-width:0}
+.text-block .editable{min-width:0;flex:1}
+.html-block{
+  padding:10px 12px;border:1px dashed var(--pinkBorder);background:#fff;border-radius:9px
+}
+.image-block{text-align:center;padding:7px 0}
+.image-stage{
+  display:block;margin:0 auto;max-width:100%;
+  border-radius:9px;border:1px solid var(--pinkBorder);overflow:hidden;background:#fff
+}
+.image-stage img{
+  display:block;width:100%;height:auto;max-width:100%;
+  user-select:none;-webkit-user-drag:none
+}
+.image-caption-tools{
+  display:none;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin-top:6px
+}
+.editing .image-caption-tools{display:flex}
+.image-caption-tools select{padding:5px 7px;border:1px solid var(--border);border-radius:7px;background:#fff}
+.block-delete{
+  display:none;margin-left:auto;border:0;border-radius:7px;background:#fff1f2;color:#be123c;
+  padding:5px 8px;font-weight:800;cursor:pointer
+}
+.editing .block-delete{display:inline-block}
+
+.code-editor{
+  min-height:260px!important;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  line-height:1.35;white-space:pre
+}
+.html-preview{
+  min-height:100px;border:1.5px solid var(--border);border-radius:9px;padding:12px;background:#fff;overflow:auto
+}
+.html-preview table,.html-block table{border-collapse:collapse;max-width:100%;overflow:auto;display:block}
+.html-preview th,.html-preview td,.html-block th,.html-block td{border:1px solid var(--border);padding:5px 7px}
+.html-preview img,.html-block img{max-width:100%;height:auto}
+
+.image-preview-shell{
+  background:#f8fafc;border:1.5px solid var(--border);border-radius:12px;padding:10px;
+  min-height:180px;display:flex;align-items:center;justify-content:center;overflow:hidden
+}
+.image-preview-shell img{max-width:100%;max-height:340px;object-fit:contain}
+.crop-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.image-info{
+  margin:10px 0;padding:8px 10px;border-radius:9px;background:#f8fafc;
+  border:1px solid var(--border);font-size:.8rem;color:var(--sub);line-height:1.35
+}
+.image-modalbox input[type=range]{width:100%}
+
+@media(max-width:700px){
+  .tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px;scrollbar-width:thin}
+  .tab{flex:0 0 auto}
+  .editing .content-block{padding-left:34px}
+  .drag-handle{width:30px;height:34px}
+  .crop-grid,.field-row{grid-template-columns:1fr}
+  .image-modalbox{max-height:92vh}
 }

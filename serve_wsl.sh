@@ -6,4 +6,5 @@ cd "$ROOT"
 "$ROOT/verify_version.sh"
 echo
 echo "StudyNurse v${VERSION} -> http://127.0.0.1:8080/"
+echo "DEV mode -> http://127.0.0.1:8080/?dev=1"
 python3 -m http.server 8080 --bind 0.0.0.0

@@ -3,6 +3,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION="$(tr -d '\r\n ' < "$ROOT/VERSION")"
 FAIL=0
+
 echo "[INFO] Expected version: ${VERSION}"
 
 check(){
@@ -16,6 +17,7 @@ check(){
 
 check index.html "StudyNurse v${VERSION}"
 check config.js "version: \"${VERSION}\""
+check config.dev.js "version: \"${VERSION}\""
 check service-worker.js "studynurse-v${VERSION}"
 check app.js "APP_VERSION = '${VERSION}'"
 

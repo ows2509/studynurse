@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.3.0</title>
+<title>StudyNurse v0.3.1</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -16,6 +16,7 @@
     <div class="brandrow">
       <div class="brand">StudyNurse</div>
       <span class="modebadge" id="modeBadge">VIEW</span>
+      <span class="envbadge" id="envBadge">PROD</span>
       <span class="spacer"></span>
       <button class="btn btn-soft" id="editBtn">편집</button>
       <button class="btn btn-primary" id="saveBtn" hidden>저장</button>
@@ -40,7 +41,7 @@
   <h3>새 개념 카드</h3>
   <div class="field"><label>제목</label><input id="newTitle"></div>
   <div class="field"><label>키워드 (쉼표 구분)</label><input id="newKeywords"></div>
-  <div class="field"><label>개념 (줄바꿈 = 항목)</label><textarea id="newBullets"></textarea></div>
+  <div class="field"><label>개념 (줄바꿈 = 문단)</label><textarea id="newBullets"></textarea></div>
   <button class="btn btn-pink" id="createCardBtn">추가</button>
   <button class="btn btn-soft" id="closeCardBtn">취소</button>
  </div>
@@ -59,7 +60,7 @@
 <div class="modal" id="htmlModal">
  <div class="modalbox html-modalbox">
   <h3>HTML 직접 편집</h3>
-  <p class="small">표, 강조, 색상 등 HTML을 사용할 수 있습니다. script / iframe / onClick 등 실행형 코드는 자동 제거됩니다.</p>
+  <p class="small">script / iframe / onClick / javascript URL 등 실행형 코드는 자동 제거됩니다.</p>
   <div class="field">
     <label>HTML</label>
     <textarea id="htmlEditor" class="code-editor" spellcheck="false"></textarea>
@@ -74,7 +75,72 @@
  </div>
 </div>
 
+<div class="modal" id="imageModal">
+ <div class="modalbox image-modalbox">
+  <h3>이미지 업로드 설정</h3>
+  <div class="image-preview-shell">
+    <img id="imagePreview" alt="업로드 이미지 미리보기">
+  </div>
+
+  <div class="field">
+    <label>해상도 / 품질</label>
+    <select id="imageProfile">
+      <option value="original">원본 유지</option>
+      <option value="high">고화질 · 최대 2560px · 90%</option>
+      <option value="standard" selected>기본 · 최대 1600px · 84%</option>
+      <option value="compact">용량 절약 · 최대 1024px · 74%</option>
+    </select>
+  </div>
+
+  <div class="crop-grid">
+    <div class="field">
+      <label>왼쪽 자르기 <span id="cropLeftValue">0%</span></label>
+      <input type="range" id="cropLeft" min="0" max="45" value="0">
+    </div>
+    <div class="field">
+      <label>오른쪽 자르기 <span id="cropRightValue">0%</span></label>
+      <input type="range" id="cropRight" min="0" max="45" value="0">
+    </div>
+    <div class="field">
+      <label>위 자르기 <span id="cropTopValue">0%</span></label>
+      <input type="range" id="cropTop" min="0" max="45" value="0">
+    </div>
+    <div class="field">
+      <label>아래 자르기 <span id="cropBottomValue">0%</span></label>
+      <input type="range" id="cropBottom" min="0" max="45" value="0">
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label>회전</label>
+      <select id="imageRotate">
+        <option value="0">0°</option>
+        <option value="90">90°</option>
+        <option value="180">180°</option>
+        <option value="270">270°</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>화면 표시 크기</label>
+      <select id="imageDisplayWidth">
+        <option value="100">100%</option>
+        <option value="75" selected>75%</option>
+        <option value="50">50%</option>
+        <option value="25">25%</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="image-info" id="imageInfo">이미지를 분석 중입니다.</div>
+
+  <button class="btn btn-pink" id="uploadImageBtn">업로드</button>
+  <button class="btn btn-soft" id="cancelImageBtn">취소</button>
+ </div>
+</div>
+
 <script src="./config.js"></script>
+<script src="./config.dev.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>
 </body>

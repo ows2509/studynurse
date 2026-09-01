@@ -1,4 +1,4 @@
-const C='studynurse-v0.4.3';
+const C='studynurse-v0.4.4';
 const A=['./','./index.html','./app.css','./app.js','./config.js','./config.dev.js','./data/seed.json','./manifest.webmanifest'];
 
 self.addEventListener('install',e=>{

@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.3';
+const APP_VERSION = '0.4.4';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -19,6 +19,8 @@ let pendingImageFile = null;
 let pendingImageBlob = null;
 let pendingImageMeta = null;
 let autoParsedCards = [];
+let qboxOpenState = new Set();
+
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({
@@ -496,6 +498,59 @@ function renderCard(c){
     </article>`;
 }
 
+
+function captureViewState(){
+  const stateObj={
+    scrollY:window.scrollY,
+    openQboxes:new Set(qboxOpenState)
+  };
+
+  document.querySelectorAll('.qbox.open').forEach(box=>{
+    const section=box.closest('.card');
+    const cardId=section?.querySelector('[data-card]')?.dataset?.card ||
+      section?.querySelector('[data-add-text]')?.dataset?.addText ||
+      section?.querySelector('[data-add-qsection]')?.dataset?.addQsection;
+    if(cardId) stateObj.openQboxes.add(cardId);
+  });
+
+  return stateObj;
+}
+
+function restoreViewState(v){
+  if(!v) return;
+
+  qboxOpenState=new Set(v.openQboxes||[]);
+
+  document.querySelectorAll('.card').forEach(cardEl=>{
+    const cardId=
+      cardEl.querySelector('[data-add-text]')?.dataset?.addText ||
+      cardEl.querySelector('[data-add-qsection]')?.dataset?.addQsection ||
+      cardEl.querySelector('[data-del-card]')?.dataset?.delCard;
+
+    const qbox=cardEl.querySelector('.qbox');
+    if(qbox && cardId && qboxOpenState.has(cardId)){
+      qbox.classList.add('open');
+    }
+  });
+
+  requestAnimationFrame(()=>{
+    window.scrollTo({top:v.scrollY,left:0,behavior:'auto'});
+  });
+}
+
+function rerenderPreserveView(){
+  const v=captureViewState();
+  render();
+  restoreViewState(v);
+}
+
+function currentCardIdFromToggle(btn){
+  const card=btn.closest('.card');
+  return card?.querySelector('[data-add-text]')?.dataset?.addText ||
+    card?.querySelector('[data-add-qsection]')?.dataset?.addQsection ||
+    card?.querySelector('[data-del-card]')?.dataset?.delCard || null;
+}
+
 function render(){
   const q = $('#searchInput').value.trim().toLowerCase();
 
@@ -587,18 +642,28 @@ function bindDynamic(){
 
     document.querySelectorAll('[data-del-vocab]').forEach(b=>b.onclick=e=>{e.stopPropagation();findCard(b.dataset.delVocab).vocab.splice(+b.dataset.index,1);markDirty();render();});
     document.querySelectorAll('[data-cat-name]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.oninput=()=>{const c=catById(el.dataset.catName);c.subLabel=el.textContent.trim();c.title=c.subLabel;markDirty();};});
-    document.querySelectorAll('[data-add-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQsection).qbank.push({date:'기출',title:'새 기출 주제',items:[{status:'O',content:'새 기출 항목'}]});markDirty();render();});
-    document.querySelectorAll('[data-del-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQsection).qbank.splice(+b.dataset.qIndex,1);markDirty();render();});
-    document.querySelectorAll('[data-add-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQitem).qbank[+b.dataset.qIndex].items.push({status:'O',content:'새 기출 항목'});markDirty();render();});
-    document.querySelectorAll('[data-del-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQitem).qbank[+b.dataset.qIndex].items.splice(+b.dataset.itemIndex,1);markDirty();render();});
-    document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();render();});
+    document.querySelectorAll('[data-add-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQsection).qbank.push({date:'기출',title:'새 기출 주제',items:[{status:'O',content:'새 기출 항목'}]});markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-del-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQsection).qbank.splice(+b.dataset.qIndex,1);markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-add-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQitem).qbank[+b.dataset.qIndex].items.push({status:'O',content:'새 기출 항목'});markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-del-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQitem).qbank[+b.dataset.qIndex].items.splice(+b.dataset.itemIndex,1);markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();rerenderPreserveView();});
     document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{findCard(el.dataset.qItem).qbank[+el.dataset.qIndex].items[+el.dataset.itemIndex].content=sanitizeRich(el.innerHTML);markDirty();});
     initCategoryDrag();
     initDragHandles();
   }
 
   document.querySelectorAll('.qtoggle').forEach(b=>{
-    b.onclick = () => b.nextElementSibling.classList.toggle('open');
+    const cardId=currentCardIdFromToggle(b);
+    const qbox=b.nextElementSibling;
+    if(cardId && qboxOpenState.has(cardId)) qbox.classList.add('open');
+
+    b.onclick=()=>{
+      qbox.classList.toggle('open');
+      if(cardId){
+        if(qbox.classList.contains('open')) qboxOpenState.add(cardId);
+        else qboxOpenState.delete(cardId);
+      }
+    };
   });
 
   document.querySelectorAll('img').forEach(img=>{
@@ -606,8 +671,40 @@ function bindDynamic(){
   });
 }
 
+
+function mountEditDock(){
+  const dock=$('#editDock');
+  const dockActions=$('#editDockActions');
+  const topActions=$('#topActions');
+  if(!dock||!dockActions||!topActions)return;
+
+  ['editBtn','autoCardBtn','saveBtn'].forEach(id=>{
+    const el=$('#'+id);
+    if(el) dockActions.appendChild(el);
+  });
+
+  dock.hidden=false;
+  hideRichToolbar();
+}
+
+function unmountEditDock(){
+  const dock=$('#editDock');
+  const dockActions=$('#editDockActions');
+  const topActions=$('#topActions');
+  if(!dock||!dockActions||!topActions)return;
+
+  ['editBtn','autoCardBtn','saveBtn'].forEach(id=>{
+    const el=$('#'+id);
+    if(el) topActions.appendChild(el);
+  });
+
+  dock.hidden=true;
+  hideRichToolbar();
+}
+
 function startEdit(){
   editSnapshot = deepClone(state);
+  mountEditDock();
   editing = true;
   dirty = false;
   document.body.classList.add('editing');
@@ -635,6 +732,7 @@ function tryExitEdit(){
 
   editing = false;
   editSnapshot = null;
+  unmountEditDock();
   document.body.classList.remove('editing');
   $('#saveBtn').hidden = true;
   $('#autoCardBtn').hidden = true;
@@ -1511,7 +1609,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.3 intentionally does NOT auto-save on background/visibility changes.
+  // v0.4.4 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

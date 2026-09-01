@@ -120,7 +120,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* StudyNurse v0.4.2 */
+/* StudyNurse v0.4.3 */
 .envbadge{
   font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
   background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
@@ -211,7 +211,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* v0.4.2 drag bugfix */
+/* v0.4.3 drag bugfix */
 .drag-handle{
   -webkit-tap-highlight-color:transparent;
   touch-action:none !important;
@@ -231,7 +231,7 @@ button,input,textarea,select{font:inherit}
   transition:transform .08s ease;
 }
 
-/* StudyNurse v0.4.2 auto parser */
+/* StudyNurse v0.4.3 auto parser */
 .auto-modalbox{max-width:760px}
 .auto-card-input{min-height:300px!important;line-height:1.45}
 .auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
@@ -251,3 +251,4 @@ button,input,textarea,select{font:inherit}
 
 .rich-toolbar{position:sticky;top:82px;z-index:18;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:7px;margin:8px 0}.rich-toolbar button{border:1px solid var(--border);background:#fff;padding:5px 8px;border-radius:6px}.rich-toolbar #rtHighlight{background:#fff9c4}.rich-toolbar #rtPink{color:#c2185b}
 .vocab-row,.qrow{display:flex;gap:6px;align-items:flex-start;margin:3px 0}.vocab-row .editable,.qrow .editable{flex:1}.mini-del{display:none;border:0;background:#fff1f2;color:#be123c;border-radius:6px}.editing .mini-del{display:inline-block}.qtools{display:none;gap:6px;margin:6px 0}.editing .qtools{display:flex}.ox-edit{border:1px solid var(--border);background:#fff;width:28px;height:28px;border-radius:50%;font-weight:900}.ox-edit.x{background:#fce7f3;color:#c2185b;border-color:#f9a8d4}.category-drag-handle{display:none;cursor:grab;touch-action:none}.editing .category-drag-handle{display:inline}.cat-dragging{opacity:.45}.cat-drag-over{outline:2px dashed var(--pink)}
+.rich-toolbar[hidden]{display:none!important}.rich-toolbar{position:sticky;top:6px;z-index:120;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.rich-toolbar button{flex:0 0 auto}@media(max-width:700px){.rich-toolbar{top:4px}}

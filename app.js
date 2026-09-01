@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.2';
+const APP_VERSION = '0.4.3';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -613,7 +613,7 @@ function startEdit(){
   document.body.classList.add('editing');
   $('#saveBtn').hidden = false;
   $('#autoCardBtn').hidden = false;
-  $('#richToolbar').hidden = false;
+  hideRichToolbar();
   $('#editBtn').textContent = '편집 종료';
   $('#modeBadge').textContent = 'EDIT';
   setSaveState('', cloudEnabled() ? '클라우드 연결' : '이 기기에 저장');
@@ -638,7 +638,7 @@ function tryExitEdit(){
   document.body.classList.remove('editing');
   $('#saveBtn').hidden = true;
   $('#autoCardBtn').hidden = true;
-  $('#richToolbar').hidden = true;
+  hideRichToolbar();
   $('#editBtn').textContent = '편집';
   $('#modeBadge').textContent = 'VIEW';
   $('#saveBtn').textContent = '저장';
@@ -1202,11 +1202,14 @@ function onDragCancel(e){
 function autoBoldAbbreviations(raw){
  return String(raw??'').replace(/(^|[\s>])(Sx|Tx|Cz|Cx):(?=\s|&nbsp;|<|$)/gi,(m,p,x)=>`${p}<b>${x}:</b>`);
 }
-function applyRichCommand(cmd,value=null){if(!editing)return;document.execCommand(cmd,false,value);markDirty();}
-function collectVocabularyFromBlocks(card){
- const have=new Set((card.vocab||[]).map(x=>plainTextFromHtml(x).trim().toLowerCase()));
- for(const b of card.blocks||[]){if(!['text','html'].includes(b.type))continue;const t=plainTextFromHtml(b.content||'');const r=/(?:^|\s)([A-Za-z][A-Za-z0-9 /-]{1,40})\s*[-–—:]\s*([가-힣][^,;()\n]{1,50})/g;let m;while((m=r.exec(t))){const v=`${m[1].trim()} - ${m[2].trim()}`;if(!have.has(v.toLowerCase())){have.add(v.toLowerCase());card.vocab.push(sanitizeRich(v));}}}
-}
+let lastRichRange=null;
+function isRichEditable(el){return !!el?.closest?.('.editable[contenteditable="true"],[data-q-item][contenteditable="true"],[data-q-title][contenteditable="true"]');}
+function rememberRichSelection(){if(!editing)return;const s=window.getSelection();if(!s||!s.rangeCount)return;const n=s.anchorNode,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e))lastRichRange=s.getRangeAt(0).cloneRange();}
+function showRichToolbar(){if(editing)$('#richToolbar').hidden=false;}
+function hideRichToolbar(){$('#richToolbar').hidden=true;}
+function updateRichToolbarContext(){if(!editing){hideRichToolbar();return;}const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(document.activeElement)||isRichEditable(e)){rememberRichSelection();showRichToolbar();}else hideRichToolbar();}
+function restoreRichSelection(){if(!lastRichRange)return;const s=window.getSelection();s.removeAllRanges();s.addRange(lastRichRange);}
+function applyRichCommand(cmd,value=null){if(!editing||!lastRichRange)return;restoreRichSelection();document.execCommand(cmd,false,value);rememberRichSelection();markDirty();showRichToolbar();}
 
 function normalizeAutoLine(line){
   return String(line || '').replace(/\uFE0F/g, '').trim();
@@ -1423,6 +1426,11 @@ function bind(){
   $('#saveBtn').onclick = () => persistData(true);
   $('#autoCardBtn').onclick = openAutoCardModal;
   $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff59d'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
+  $('#richToolbar').addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});
+  document.addEventListener('selectionchange',()=>{if(!editing)return;const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e)){rememberRichSelection();showRichToolbar();}});
+  document.addEventListener('focusin',e=>{if(editing&&isRichEditable(e.target))setTimeout(updateRichToolbarContext,0);});
+  document.addEventListener('pointerdown',e=>{if(!editing||e.target.closest('#richToolbar')||isRichEditable(e.target))return;setTimeout(updateRichToolbarContext,0);});
+
 
   $('#addCardBtn').onclick = () => {
     if (!editing) startEdit();
@@ -1503,7 +1511,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.2 intentionally does NOT auto-save on background/visibility changes.
+  // v0.4.3 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

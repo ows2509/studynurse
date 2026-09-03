@@ -1,25 +1,21 @@
-# StudyNurse v0.5.5 Production Hotfix
+# StudyNurse v0.5.6 Quiz Hotfix
 
-## 핵심 수정
-- 편집 / 저장 / 자동정리 / 퀴즈 / 진단을 document 이벤트 위임 방식으로 변경
-- sticky dock으로 버튼이 이동하거나 화면이 재렌더링돼도 버튼 이벤트 유지
-- 저장 3단계 상태 표시
-- IndexedDB 5초, Supabase 12초 타임아웃
-- revision log 오류가 실제 문서 저장을 막지 않음
-- 성공/실패 alert 및 진단 정보 강화
-- 자동정리 미리보기는 선택사항
-- 입력 후 바로 [카드 생성] 활성화
-- [카드 생성] 시 현재 textarea를 다시 파싱
-- 기존 CLOUD DB 비파괴
+- 정답 확인 후 [다음] 정상 이동
+- 마지막 문제 후 결과/정답률 표시
+- O/X 지시문과 실제 문제 문장 분리
+- 붙어 있는 ⭕/⛔ 문장을 개별 문제 문장으로 분리
+- #으로 시작하는 카테고리는 일반 퀴즈와 4지선다 오답 후보에서 제외
+- 단, 현재 선택 카테고리가 #test라면 #test만 퀴즈에 사용
+- 검색/편집/저장/DND에는 영향 없음
+- v0.5.5 저장/자동정리 안정화 유지
+- DB 비파괴
 
-## 배포
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.5
+배포:
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.6
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
-
-Supabase: supabase_upgrade_0.5.5.sql
-
+Supabase: supabase_upgrade_0.5.6.sql
 git add -A
-git commit -m "StudyNurse v0.5.5"
+git commit -m "StudyNurse v0.5.6"
 git rebase origin/main
 git push

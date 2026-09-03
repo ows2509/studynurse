@@ -1,5 +1,5 @@
 window.STUDYNURSE_DEV_CONFIG = {
-  version: "0.5.5",
+  version: "0.5.6",
   environment: "DEV",
   supabaseUrl: "",
   supabaseAnonKey: "",

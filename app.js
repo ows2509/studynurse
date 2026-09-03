@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.5';
+const APP_VERSION = '0.5.6';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1655,23 +1655,82 @@ function closeAutoCardModal(){
 
 
 function qPlain(x){return plainTextFromHtml(x||'').trim();}
+
+function quizCategoryName(cat){
+  return String(cat?.subLabel || cat?.title || cat?.sub || '').trim();
+}
+function isQuizExcludedCategory(cat){
+  return quizCategoryName(cat).startsWith('#');
+}
+function quizActiveCategory(){
+  return catById(selectedCategory);
+}
+function quizAllowedCategories(){
+  const active=quizActiveCategory();
+  if(active && isQuizExcludedCategory(active)) return [active];
+  return (state.categories||[]).filter(cat=>!isQuizExcludedCategory(cat));
+}
+function splitStudyStatements(raw){
+  const text=qPlain(raw);
+  if(!text)return[];
+  const normalized=text.replace(/([⭕⛔❎❌✅])/g,'\n$1 ').replace(/\n{2,}/g,'\n').trim();
+  return normalized.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>2);
+}
+function normalizeQuizStatement(s){
+  return String(s||'').replace(/^[⭕✅]\s*/,'').replace(/^[⛔❎❌]\s*/,'').trim();
+}
+
 function qFacts(){
- const scope=$('#quizScope').value,cat=catById(selectedCategory),pairs=scope==='all'?state.categories.flatMap(c=>c.cards.map(card=>[c,card])):(cat?cat.cards.map(card=>[cat,card]):[]),out=[];
- pairs.forEach(([c,card])=>{(card.blocks||[]).filter(b=>b.type==='text').forEach(b=>{const t=qPlain(b.content);if(t.length>3)out.push({t,card:qPlain(card.title),cat:c.subLabel||c.title,categoryId:c.id,cardId:card.id});});(card.vocab||[]).forEach(v=>{const t=qPlain(v);if(t.length>3)out.push({t,card:qPlain(card.title),cat:c.subLabel||c.title,categoryId:c.id,cardId:card.id});});(card.qbank||[]).forEach(q=>{if(q.type==='qa'&&q.question&&q.answer)out.push({t:qPlain(q.answer),q:qPlain(q.question),card:qPlain(card.title),cat:c.subLabel||c.title,categoryId:c.id,cardId:card.id});});});
- return out;
+  const scope=$('#quizScope').value;
+  const active=quizActiveCategory();
+  let cats=[];
+
+  if(active && isQuizExcludedCategory(active)){
+    cats=[active];
+  }else if(scope==='all'){
+    cats=quizAllowedCategories();
+  }else{
+    cats=active && !isQuizExcludedCategory(active) ? [active] : quizAllowedCategories();
+  }
+
+  const out=[];
+  cats.forEach(c=>{
+    (c.cards||[]).forEach(card=>{
+      const base={card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id};
+
+      (card.blocks||[]).filter(b=>b.type==='text').forEach(b=>{
+        splitStudyStatements(b.content).forEach(t=>{
+          if(t.length>3)out.push({...base,t});
+        });
+      });
+
+      (card.vocab||[]).forEach(v=>{
+        const t=qPlain(v);
+        if(t.length>3)out.push({...base,t});
+      });
+
+      (card.qbank||[]).forEach(q=>{
+        if(q.type==='qa'&&q.question&&q.answer){
+          out.push({...base,t:qPlain(q.answer),q:qPlain(q.question)});
+        }
+      });
+    });
+  });
+  return out;
 }
 function qShuffle(x){return [...x].sort(()=>Math.random()-.5)}
 function makeQuiz(){
   const facts=qFacts();
-  const all=state.categories.flatMap(c=>c.cards.flatMap(card=>
-    (card.blocks||[]).filter(b=>b.type==='text').map(b=>({
-      t:qPlain(b.content),
-      card:qPlain(card.title),
-      cat:c.subLabel||c.title,
-      categoryId:c.id,
-      cardId:card.id
-    }))
-  )).filter(x=>x.t.length>3);
+  const allowedCats=quizAllowedCategories();
+  const all=allowedCats.flatMap(c=>
+    (c.cards||[]).flatMap(card=>
+      (card.blocks||[]).filter(b=>b.type==='text').flatMap(b=>
+        splitStudyStatements(b.content).map(t=>({
+          t,card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id
+        }))
+      )
+    )
+  ).filter(x=>x.t.length>3);
 
   const n=Math.min(+$ ('#quizCount').value,facts.length*2||0);
   const typ=$('#quizType').value;
@@ -1679,70 +1738,58 @@ function makeQuiz(){
 
   for(let i=0;i<n;i++){
     const x=facts[Math.floor(Math.random()*facts.length)];
+    if(!x)break;
     const kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):typ;
 
     if(x.q){
-      const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
+      const correct=normalizeQuizStatement(x.t);
+      const wrong=qShuffle(all.filter(y=>normalizeQuizStatement(y.t)!==correct))
+        .slice(0,3).map(y=>normalizeQuizStatement(y.t));
       if(wrong.length===3){
-        res.push({
-          kind:'mcq',
-          q:x.q,
-          a:x.t,
-          opts:qShuffle([x.t,...wrong]),
-          src:`${x.cat} > ${x.card}`,
-          categoryId:x.categoryId,
-          cardId:x.cardId
-        });
+        res.push({kind:'mcq',instruction:'다음 문제의 정답을 선택하세요.',statement:x.q,a:correct,opts:qShuffle([correct,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
       }
       continue;
     }
 
     if(kind==='ox'){
-      // Never ask whether something "belongs to a card".
-      // True: exact stored study statement.
-      // False: only mutate clearly structured Sx/Tx/Cz/Cx statements.
-      const match=x.t.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
-      let statement=x.t;
-      let answer='O';
+      const raw=String(x.t||'').trim();
+
+      if(/^[⛔❎❌]/.test(raw)){
+        res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:normalizeQuizStatement(raw),a:'X',opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
+        continue;
+      }
+      if(/^[⭕✅]/.test(raw)){
+        res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:normalizeQuizStatement(raw),a:'O',opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
+        continue;
+      }
+
+      const normalized=normalizeQuizStatement(raw);
+      const match=normalized.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
+      let statement=normalized,answer='O';
 
       if(match && Math.random()<.45){
-        const sameLabelCandidates=all.filter(y=>{
-          const mm=y.t.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
-          return mm && mm[1].toLowerCase()===match[1].toLowerCase() && y.t!==x.t;
+        const sameLabel=all.filter(y=>{
+          const yy=normalizeQuizStatement(y.t);
+          const mm=yy.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
+          return mm&&mm[1].toLowerCase()===match[1].toLowerCase()&&yy!==normalized;
         });
-        const other=qShuffle(sameLabelCandidates)[0];
+        const other=qShuffle(sameLabel)[0];
         if(other){
-          const otherValue=other.t.replace(/^(Sx|Tx|Cz|Cx):\s*/i,'');
-          statement=`${match[1]}: ${otherValue}`;
+          statement=`${match[1]}: ${normalizeQuizStatement(other.t).replace(/^(Sx|Tx|Cz|Cx):\s*/i,'')}`;
           answer='X';
         }
       }
 
-      res.push({
-        kind:'ox',
-        q:`다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.\n${statement}`,
-        a:answer,
-        opts:['O','X'],
-        src:`${x.cat} > ${x.card}`,
-        categoryId:x.categoryId,
-        cardId:x.cardId
-      });
+      res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement,a:answer,opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
     }else{
-      const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
+      const correct=normalizeQuizStatement(x.t);
+      const wrong=qShuffle(all.filter(y=>normalizeQuizStatement(y.t)!==correct))
+        .slice(0,3).map(y=>normalizeQuizStatement(y.t));
       if(wrong.length===3){
-        res.push({
-          kind:'mcq',
-          q:`다음 중 "${x.card}"의 학습 내용으로 맞는 것은?`,
-          a:x.t,
-          opts:qShuffle([x.t,...wrong]),
-          src:`${x.cat} > ${x.card}`,
-          categoryId:x.categoryId,
-          cardId:x.cardId
-        });
+        res.push({kind:'mcq',instruction:'다음 중 맞는 내용을 선택하세요.',statement:`"${x.card}"의 학습 내용으로 맞는 것은?`,a:correct,opts:qShuffle([correct,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
       }
     }
   }
-
   return res;
 }
 function jumpToQuizSource(q){
@@ -1755,8 +1802,51 @@ function jumpToQuizSource(q){
   if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('source-highlight');setTimeout(()=>el.classList.remove('source-highlight'),1900);}
  }));
 }
-function showQuiz(){const x=quizQuestions[quizIndex];if(!x)return;quizChoice=null;$('#quizProgress').textContent=`문제 ${quizIndex+1} / ${quizQuestions.length}`;$('#quizSource').innerHTML=`출처: <button class="quiz-source-link" data-quiz-source="1">${esc(x.src)}</button>`;$('#quizSource').querySelector('[data-quiz-source]').onclick=()=>jumpToQuizSource(x);$('#quizQuestion').textContent=x.q;$('#quizOptions').innerHTML=x.opts.map((o,i)=>`<button class="quiz-option" data-qchoice="${i}">${i+1}. ${esc(o)}</button>`).join('');$('#quizAnswer').hidden=true;$('#revealQuizBtn').hidden=false;$('#nextQuizBtn').hidden=true;document.querySelectorAll('[data-qchoice]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.quiz-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');quizChoice=x.opts[+b.dataset.qchoice];});}
+function showQuiz(){
+  const x=quizQuestions[quizIndex];
+  if(!x)return;
+
+  quizChoice=null;
+  $('#quizProgress').textContent=`문제 ${quizIndex+1} / ${quizQuestions.length}`;
+  $('#quizSource').innerHTML=`출처: <button class="quiz-source-link" data-quiz-source="1">${esc(x.src)}</button>`;
+  $('#quizSource').querySelector('[data-quiz-source]').onclick=()=>jumpToQuizSource(x);
+
+  $('#quizQuestion').innerHTML=
+    `<div class="quiz-instruction">${esc(x.instruction||'문제를 확인하세요.')}</div>`+
+    `<div class="quiz-statement">${esc(x.statement||x.q||'')}</div>`;
+
+  $('#quizOptions').innerHTML=x.opts.map((o,i)=>`<button class="quiz-option" data-qchoice="${i}">${i+1}. ${esc(o)}</button>`).join('');
+  $('#quizAnswer').hidden=true;
+  $('#quizAnswer').innerHTML='';
+  $('#revealQuizBtn').hidden=false;
+  $('#nextQuizBtn').hidden=true;
+
+  document.querySelectorAll('[data-qchoice]').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.quiz-option').forEach(x=>x.classList.remove('selected'));
+    b.classList.add('selected');
+    quizChoice=x.opts[+b.dataset.qchoice];
+  });
+}
 function startQuiz(){quizQuestions=makeQuiz();if(!quizQuestions.length)return alert('문제를 만들 수 있는 카드 내용이 부족합니다.');quizIndex=quizScore=0;$('#quizSetup').hidden=true;$('#quizPlay').hidden=false;$('#quizResult').hidden=true;showQuiz();}
+function nextQuiz(){
+  quizIndex++;
+
+  if(quizIndex>=quizQuestions.length){
+    $('#quizPlay').hidden=true;
+    $('#quizResult').hidden=false;
+    const total=quizQuestions.length;
+    const rate=total?Math.round(quizScore/total*100):0;
+    $('#quizResult').innerHTML=`<div class="quiz-result"><b>${total}문제 중 ${quizScore}문제 정답</b><br>정답률 ${rate}%<br><br><button class="btn btn-soft" id="restartQuizBtn">다시 풀기</button></div>`;
+    $('#restartQuizBtn').onclick=()=>{
+      $('#quizResult').hidden=true;
+      $('#quizSetup').hidden=false;
+    };
+    return;
+  }
+
+  showQuiz();
+}
+
 function revealQuiz(){
   const x=quizQuestions[quizIndex];
   const correct=quizChoice===x.a;
@@ -1866,6 +1956,16 @@ function bindCriticalActions(){
 
     if(btn.id==='quizBtn'){
       e.preventDefault();e.stopImmediatePropagation();
+      const active=quizActiveCategory();
+      const scope=$('#quizScope');
+      if(active && isQuizExcludedCategory(active)){
+        scope.value='category';
+        scope.disabled=true;
+        scope.title='# 카테고리는 현재 카테고리 시험 전용입니다.';
+      }else{
+        scope.disabled=false;
+        scope.title='';
+      }
       $('#quizModal').classList.add('open');
       $('#quizSetup').hidden=false;
       $('#quizPlay').hidden=true;
@@ -2017,7 +2117,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.5 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.6 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.4';
+const APP_VERSION = '0.5.5';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -21,7 +21,10 @@ let pendingImageMeta = null;
 let autoParsedCards = [];
 let qboxOpenState = new Set();
 let activeDataSource='LOADING';
-let initialLoadError=null;let quizQuestions=[],quizIndex=0,quizScore=0,quizChoice=null;
+let initialLoadError=null;
+let saveInFlight=false;
+let criticalActionsBound=false;
+let lastSaveError=null;let quizQuestions=[],quizIndex=0,quizScore=0,quizChoice=null;
 
 
 const $ = s => document.querySelector(s);
@@ -337,39 +340,102 @@ async function createRevisionSnapshot(reason){
   }
 }
 
+
+function withTimeout(promise,ms,label){
+  let timer;
+  const timeout=new Promise((_,reject)=>{
+    timer=setTimeout(()=>reject(new Error(`${label} timeout (${Math.round(ms/1000)}s)`)),ms);
+  });
+  return Promise.race([promise,timeout]).finally(()=>clearTimeout(timer));
+}
+
+async function ensureCloudClient(){
+  if(!cloudEnabled())return null;
+  if(sb)return sb;
+  if(!window.supabase?.createClient)throw new Error('Supabase library not loaded');
+  sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+  return sb;
+}
 async function persistData(showAlert=true){
-  collectEditable();
-  state.categories.forEach(cat=>cat.cards.forEach(collectVocabularyFromBlocks));
-  state = migrateState(state);
-  setSaveState('saving','저장 중...');
+  if(saveInFlight)return false;
 
-  try {
-    // Save local copy only when the user explicitly presses Save.
-    await idbPut(localDatasetKey(), state);
+  saveInFlight=true;
+  lastSaveError=null;
 
-    if (cloudEnabled()) {
-      await createRevisionSnapshot(`manual-save-${APP_VERSION}`);
+  const btn=$('#saveBtn');
+  if(btn){btn.disabled=true;btn.textContent='저장 중...';}
+  setSaveState('saving','1/3 편집 내용 수집 중...');
 
-      const {error} = await sb.from('study_documents').upsert({
-        doc_key: CFG.datasetKey,
-        payload: state,
-        updated_at: new Date().toISOString()
-      }, {onConflict:'doc_key'});
+  try{
+    collectEditable();
 
-      if (error) throw error;
+    for(const cat of(state.categories||[])){
+      for(const card of(cat.cards||[])){
+        if(!Array.isArray(card.vocab))card.vocab=[];
+        try{collectVocabularyFromBlocks(card);}
+        catch(e){console.warn('Vocabulary collection skipped',card?.title,e);}
+      }
     }
 
-    dirty = false;
-    editSnapshot = deepClone(state);
-    $('#saveBtn').textContent = '저장';
-    setSaveState('', cloudEnabled() ? '✓ 클라우드 저장됨' : '✓ 이 기기에 저장됨');
+    state=migrateState(state);
+    state.version=APP_VERSION;
 
-    if (showAlert) alert(cloudEnabled() ? '클라우드 저장 완료' : '이 기기에 저장 완료');
+    setSaveState('saving','2/3 이 기기에 백업 중...');
+    await withTimeout(idbPut(localDatasetKey(),deepClone(state)),5000,'IndexedDB save');
+
+    if(cloudEnabled()){
+      setSaveState('saving','3/3 Supabase 저장 중...');
+      await ensureCloudClient();
+
+      try{
+        await withTimeout(
+          createRevisionSnapshot(`manual-save-${APP_VERSION}`),
+          5000,
+          'revision snapshot'
+        );
+      }catch(e){
+        console.warn('Revision snapshot skipped',e);
+      }
+
+      const cloudSave=(async()=>{
+        const {data,error}=await sb.from('study_documents').upsert({
+          doc_key:CFG.datasetKey||(DEV_MODE?'main-dev':'main'),
+          payload:state,
+          updated_at:new Date().toISOString()
+        },{onConflict:'doc_key'}).select('doc_key,updated_at');
+
+        if(error)throw error;
+        return data;
+      })();
+
+      await withTimeout(cloudSave,12000,'Supabase save');
+      setDataSourceBadge('CLOUD',`${state.categories.length} categories`);
+    }else{
+      setDataSourceBadge('LOCAL',`${state.categories.length} categories`);
+    }
+
+    dirty=false;
+    editSnapshot=deepClone(state);
+
+    if(btn){btn.disabled=false;btn.textContent='저장';}
+
+    const msg=cloudEnabled()?'✓ 클라우드 저장 완료':'✓ 이 기기에 저장 완료';
+    setSaveState('',msg);
+    if(showAlert)alert(msg);
     return true;
-  } catch(e) {
-    setSaveState('error','저장 실패');
-    alert('저장 실패: ' + (e.message || e));
+
+  }catch(e){
+    lastSaveError=e;
+    console.error('StudyNurse SAVE FAILED',e,e?.stack);
+
+    if(btn){btn.disabled=false;btn.textContent='저장 *';}
+
+    setSaveState('error',`저장 실패: ${e?.message||e}`);
+    if(showAlert)alert(`저장 실패\n${e?.message||e}`);
     return false;
+
+  }finally{
+    saveInFlight=false;
   }
 }
 
@@ -1512,27 +1578,30 @@ function renderAutoPreview(){
 }
 
 function createCardsFromAutoText(){
-  const cat = catById(selectedCategory);
-  if (!cat) {
-    alert('카테고리를 선택하세요.');
+  const cat=catById(selectedCategory);
+  if(!cat){alert('카테고리를 선택하세요.');return;}
+
+  const raw=$('#autoCardInput').value.trim();
+  if(!raw){alert('자동정리할 내용을 입력하세요.');return;}
+
+  // Preview is optional. Always parse the current input when creating cards.
+  autoParsedCards=parseAutoCards(raw);
+
+  if(!autoParsedCards.length){
+    alert('카드로 정리할 수 있는 내용을 찾지 못했습니다.');
     return;
   }
 
-  if (!autoParsedCards.length) {
-    renderAutoPreview();
-    if (!autoParsedCards.length) return;
-  }
-
-  for (const parsed of autoParsedCards) {
-    const blocks = parsed.notes.map((n,i)=>({
+  for(const parsed of autoParsedCards){
+    const blocks=parsed.notes.map((n,i)=>({
       id:makeId('txt'),
       type:'text',
       content:sanitizeRich(autoBoldAbbreviations(n.text)),
       order:i
     }));
 
-    const card = {
-      id:makeId(cat.id || 'card'),
+    const card={
+      id:makeId(cat.id||'card'),
       title:esc(parsed.title),
       keywords:[],
       blocks,
@@ -1550,23 +1619,19 @@ function createCardsFromAutoText(){
     cat.cards.push(card);
   }
 
-  const count = autoParsedCards.length;
+  const count=autoParsedCards.length;
 
   $('#autoCardModal').classList.remove('open');
-  $('#autoCardInput').value = '';
+  $('#autoCardInput').value='';
   $('#autoPreviewSummary').classList.remove('show');
-  $('#autoPreviewSummary').textContent = '';
-  $('#autoPreviewList').innerHTML = '';
-  autoParsedCards = [];
+  $('#autoPreviewSummary').textContent='';
+  $('#autoPreviewList').innerHTML='';
+  autoParsedCards=[];
 
   markDirty();
-  render();
+  rerenderPreserveView();
 
-  alert(
-    `${count}개 카드를 편집 화면에 생성했습니다.\n` +
-    `아직 DB에는 저장되지 않았습니다.\n` +
-    `내용을 확인한 뒤 [저장] 버튼을 눌러주세요.`
-  );
+  alert(`${count}개 카드를 생성했습니다.\n아직 DB에는 저장되지 않았습니다.\n확인 후 [저장]을 눌러주세요.`);
 }
 
 function openAutoCardModal(){
@@ -1734,7 +1799,10 @@ function renderDiagnostics(){
     ['Card DND handles',String(document.querySelectorAll('[data-card-drag]').length),true],
     ['QBank DND handles',String(document.querySelectorAll('[data-qsection-drag]').length),true],
     ['Service Worker',navigator.serviceWorker?.controller?'controlled':'not controlled',true],
-    ['Cloud enabled',String(cloudEnabled()),cloudEnabled()]
+    ['Cloud enabled',String(cloudEnabled()),cloudEnabled()],
+    ['Critical delegation',String(criticalActionsBound),criticalActionsBound],
+    ['Save in flight',String(saveInFlight),!saveInFlight],
+    ['Last save error',lastSaveError?(lastSaveError.message||String(lastSaveError)):'none',!lastSaveError]
   ];
   $('#diagGrid').innerHTML=data.map(([k,v,ok,warn])=>
     `<div class="diag-item"><b>${esc(k)}</b><span class="${diagClass(ok,warn)}">${esc(v)}</span></div>`
@@ -1769,11 +1837,54 @@ async function testDiagnosticCloud(){
   }
 }
 
+
+function bindCriticalActions(){
+  if(criticalActionsBound)return;
+  criticalActionsBound=true;
+
+  document.addEventListener('click',async e=>{
+    const btn=e.target.closest('button');
+    if(!btn)return;
+
+    if(btn.id==='editBtn'){
+      e.preventDefault();e.stopImmediatePropagation();
+      toggleEdit();
+      return;
+    }
+
+    if(btn.id==='saveBtn'){
+      e.preventDefault();e.stopImmediatePropagation();
+      await persistData(true);
+      return;
+    }
+
+    if(btn.id==='autoCardBtn'){
+      e.preventDefault();e.stopImmediatePropagation();
+      openAutoCardModal();
+      return;
+    }
+
+    if(btn.id==='quizBtn'){
+      e.preventDefault();e.stopImmediatePropagation();
+      $('#quizModal').classList.add('open');
+      $('#quizSetup').hidden=false;
+      $('#quizPlay').hidden=true;
+      $('#quizResult').hidden=true;
+      return;
+    }
+
+    if(btn.id==='diagBtn'){
+      e.preventDefault();e.stopImmediatePropagation();
+      $('#diagModal').classList.add('open');
+      renderDiagnostics();
+      return;
+    }
+  },true);
+}
+
 function bind(){
+  bindCriticalActions();
   $('#searchInput').addEventListener('input', render);
-  $('#editBtn').onclick = toggleEdit;
-  $('#saveBtn').onclick = () => persistData(true);
-  $('#autoCardBtn').onclick = openAutoCardModal;
   $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff59d'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
   $('#richToolbar').addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});
   document.addEventListener('selectionchange',()=>{if(!editing)return;const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e)){rememberRichSelection();showRichToolbar();}});
@@ -1824,24 +1935,14 @@ function bind(){
   $('#closeAutoCardsBtn').onclick = closeAutoCardModal;
   $('#autoCardInput').addEventListener('input', () => {
     autoParsedCards = [];
-    $('#createAutoCardsBtn').disabled = true;
+    $('#createAutoCardsBtn').disabled = !$('#autoCardInput').value.trim();
   });
-  $('#quizBtn').onclick=()=>{
-    $('#quizModal').classList.add('open');
-    $('#quizSetup').hidden=false;
-    $('#quizPlay').hidden=true;
-    $('#quizResult').hidden=true;
-  };
   $('#closeQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
   $('#exitQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
   $('#startQuizBtn').onclick=startQuiz;
   $('#revealQuizBtn').onclick=revealQuiz;
   $('#nextQuizBtn').onclick=nextQuiz;
 
-  $('#diagBtn').onclick=()=>{
-    $('#diagModal').classList.add('open');
-    renderDiagnostics();
-  };
   $('#diagRefreshBtn').onclick=renderDiagnostics;
   $('#diagCloudBtn').onclick=testDiagnosticCloud;
   $('#diagCloseBtn').onclick=()=>$('#diagModal').classList.remove('open');
@@ -1881,6 +1982,11 @@ async function init(){
       console.error('StudyNurse UI BIND ERROR:',bindError);
       setSaveState('error','일부 UI 연결 오류 · 데이터는 정상 로드됨');
     }
+    const requiredIds=['editBtn','saveBtn','quizBtn','autoCardBtn','diagBtn'];
+    const missing=requiredIds.filter(id=>!$('#'+id));
+    if(missing.length)throw new Error('Required UI missing: '+missing.join(', '));
+    if(!criticalActionsBound)throw new Error('Critical action delegation is not active');
+
 
     if(activeDataSource==='CLOUD'){
       setSaveState('',`${DEV_MODE?'DEV':'PROD'} · CLOUD`);
@@ -1911,7 +2017,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.4 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.5 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

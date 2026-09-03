@@ -1,24 +1,25 @@
-# StudyNurse v0.5.4 Hotfix
+# StudyNurse v0.5.5 Production Hotfix
 
-원인 확정:
-v0.5.3 app.js에서 bind() 함수 정의가 누락되어 데이터는 보이지만 편집/퀴즈 버튼이 무반응이었습니다.
+## 핵심 수정
+- 편집 / 저장 / 자동정리 / 퀴즈 / 진단을 document 이벤트 위임 방식으로 변경
+- sticky dock으로 버튼이 이동하거나 화면이 재렌더링돼도 버튼 이벤트 유지
+- 저장 3단계 상태 표시
+- IndexedDB 5초, Supabase 12초 타임아웃
+- revision log 오류가 실제 문서 저장을 막지 않음
+- 성공/실패 alert 및 진단 정보 강화
+- 자동정리 미리보기는 선택사항
+- 입력 후 바로 [카드 생성] 활성화
+- [카드 생성] 시 현재 textarea를 다시 파싱
+- 기존 CLOUD DB 비파괴
 
-수정:
-- v0.4.5의 검증된 bind() 복원
-- v0.5.x 퀴즈 이벤트 연결 추가
-- 진단 버튼 추가
-- 진단 화면에서 Version / CLOUD-LOCAL / Category/Card 수 / 편집·퀴즈 onclick / DND 핸들 / Service Worker 상태 확인
-- Supabase 직접 읽기 테스트 버튼 추가
-- 기존 CLOUD 95카드 로딩, DB 비파괴 유지
-
-배포:
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.4
+## 배포
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.5
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
 
-Supabase: supabase_upgrade_0.5.4.sql
+Supabase: supabase_upgrade_0.5.5.sql
 
 git add -A
-git commit -m "StudyNurse v0.5.4"
+git commit -m "StudyNurse v0.5.5"
 git rebase origin/main
 git push

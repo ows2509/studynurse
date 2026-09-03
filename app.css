@@ -120,7 +120,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* StudyNurse v0.5.1 */
+/* StudyNurse v0.5.2 */
 .envbadge{
   font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
   background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
@@ -211,7 +211,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* v0.5.1 drag bugfix */
+/* v0.5.2 drag bugfix */
 .drag-handle{
   -webkit-tap-highlight-color:transparent;
   touch-action:none !important;
@@ -231,7 +231,7 @@ button,input,textarea,select{font:inherit}
   transition:transform .08s ease;
 }
 
-/* StudyNurse v0.5.1 auto parser */
+/* StudyNurse v0.5.2 auto parser */
 .auto-modalbox{max-width:760px}
 .auto-card-input{min-height:300px!important;line-height:1.45}
 .auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
@@ -252,7 +252,7 @@ button,input,textarea,select{font:inherit}
 .rich-toolbar{position:sticky;top:82px;z-index:18;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:7px;margin:8px 0}.rich-toolbar button{border:1px solid var(--border);background:#fff;padding:5px 8px;border-radius:6px}.rich-toolbar #rtHighlight{background:#fff9c4}.rich-toolbar #rtPink{color:#c2185b}
 .vocab-row,.qrow{display:flex;gap:6px;align-items:flex-start;margin:3px 0}.vocab-row .editable,.qrow .editable{flex:1}.mini-del{display:none;border:0;background:#fff1f2;color:#be123c;border-radius:6px}.editing .mini-del{display:inline-block}.qtools{display:none;gap:6px;margin:6px 0}.editing .qtools{display:flex}.ox-edit{border:1px solid var(--border);background:#fff;width:28px;height:28px;border-radius:50%;font-weight:900}.ox-edit.x{background:#fce7f3;color:#c2185b;border-color:#f9a8d4}.category-drag-handle{display:none;cursor:grab;touch-action:none}.editing .category-drag-handle{display:inline}.cat-dragging{opacity:.45}.cat-drag-over{outline:2px dashed var(--pink)}
 .rich-toolbar[hidden]{display:none!important}.rich-toolbar{position:sticky;top:6px;z-index:120;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.rich-toolbar button{flex:0 0 auto}@media(max-width:700px){.rich-toolbar{top:4px}}
-/* v0.5.1 sticky edit dock + qbank state preservation */
+/* v0.5.2 sticky edit dock + qbank state preservation */
 .edit-dock[hidden]{display:none!important}
 .edit-dock{
   position:sticky;
@@ -293,7 +293,7 @@ button,input,textarea,select{font:inherit}
   .edit-dock-actions .btn{flex:0 0 auto}
 }
 .editing .card{margin-left:38px;overflow:visible}.card-drag-handle{display:none;position:absolute;left:-38px;top:50%;transform:translateY(-50%);width:32px;min-height:58px;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:9px;background:#f7f3ee;color:var(--brown);font-weight:900;cursor:grab;touch-action:none;z-index:4}.editing .card-drag-handle{display:flex}.card.card-dragging{opacity:.48}.card.card-drop-target{outline:2px dashed var(--pink);outline-offset:5px}@media(max-width:700px){.editing .card{margin-left:34px}.card-drag-handle{left:-34px;width:30px;min-height:64px}}.brand small{font-size:.62em;color:var(--sub)}.quiz-question{font-size:1.05rem;font-weight:900;padding:14px;border:1px solid var(--border);border-radius:10px;margin:10px 0}.quiz-option{display:block;width:100%;text-align:left;margin:6px 0;padding:9px;border:1px solid var(--border);border-radius:8px;background:#fff}.quiz-option.selected{background:var(--pinkSoft);border-color:var(--pink)}.quiz-answer{margin:10px 0;padding:10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px}.qa-mask{display:inline-block;min-width:120px;background:#aaa;color:transparent;border-radius:4px}.qsection-drag-handle{display:none}.editing .qsection-drag-handle{display:inline-block;cursor:grab}
-/* v0.5.1 */
+/* v0.5.2 */
 .card{position:relative!important}
 .editing .card{overflow:visible!important;margin-left:42px!important}
 .editing .card-drag-handle{
@@ -314,3 +314,81 @@ button,input,textarea,select{font:inherit}
 .quiz-source-link{border:0;background:transparent;color:var(--pinkDark);text-decoration:underline;font-weight:900;cursor:pointer;padding:0}
 .card.source-highlight{animation:sourceFlash 1.8s ease}
 @keyframes sourceFlash{0%,100%{box-shadow:var(--shadow)}25%,70%{box-shadow:0 0 0 4px rgba(194,24,91,.25),var(--shadow);background:#fff7fb}}
+
+/* v0.5.2 emergency fixes */
+.data-source-badge{
+  display:inline-flex;align-items:center;
+  padding:2px 7px;border-radius:999px;
+  font-size:.65rem;font-weight:900;
+  border:1px solid #d6d3d1;background:#fafaf9;color:#57534e;
+}
+.data-source-badge.cloud{background:#ecfdf5;border-color:#86efac;color:#047857}
+.data-source-badge.local{background:#fff7ed;border-color:#fdba74;color:#c2410c}
+.data-source-badge.error{background:#fef2f2;border-color:#fca5a5;color:#b91c1c}
+
+/* Make card DND handle physically visible in edit mode */
+.card{position:relative!important}
+body.editing .card{
+  overflow:visible!important;
+  margin-left:46px!important;
+}
+body.editing .card-drag-handle{
+  display:flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  position:absolute!important;
+  left:-44px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  width:36px!important;
+  min-height:72px!important;
+  align-items:center!important;
+  justify-content:center!important;
+  z-index:30!important;
+  border:2px solid #c7b7a8!important;
+  border-radius:10px!important;
+  background:#fffaf5!important;
+  color:#6b4f3b!important;
+  font-size:1.15rem!important;
+  font-weight:900!important;
+  cursor:grab!important;
+  touch-action:none!important;
+}
+
+/* Make qbank section handle visible */
+body.editing .qsection{
+  position:relative!important;
+}
+body.editing .qsection-drag-handle{
+  display:inline-flex!important;
+  visibility:visible!important;
+  opacity:1!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:36px!important;
+  min-height:36px!important;
+  padding:4px 8px!important;
+  margin-right:6px!important;
+  border:1.5px solid #c7b7a8!important;
+  border-radius:8px!important;
+  background:#fffaf5!important;
+  color:#6b4f3b!important;
+  font-weight:900!important;
+  cursor:grab!important;
+  touch-action:none!important;
+}
+
+/* Source jump */
+.card.source-highlight{
+  animation:sourceFlash052 1.8s ease;
+}
+@keyframes sourceFlash052{
+  0%,100%{box-shadow:var(--shadow)}
+  25%,70%{box-shadow:0 0 0 5px rgba(194,24,91,.28),var(--shadow);background:#fff7fb}
+}
+
+/* Quiz result clarity */
+.quiz-feedback{margin:10px 0;padding:11px 12px;border-radius:10px;font-weight:900}
+.quiz-feedback.correct{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+.quiz-feedback.wrong{background:#fdf2f8;border:1px solid #f9a8d4;color:#be123c}
+.quiz-source-link{border:0;background:transparent;color:var(--pinkDark);text-decoration:underline;font-weight:900;cursor:pointer}

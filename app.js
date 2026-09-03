@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.1';
+const APP_VERSION = '0.5.2';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -19,7 +19,9 @@ let pendingImageFile = null;
 let pendingImageBlob = null;
 let pendingImageMeta = null;
 let autoParsedCards = [];
-let qboxOpenState = new Set();let quizQuestions=[],quizIndex=0,quizScore=0,quizChoice=null;
+let qboxOpenState = new Set();
+let activeDataSource='LOADING';
+let initialLoadError=null;let quizQuestions=[],quizIndex=0,quizScore=0,quizChoice=null;
 
 
 const $ = s => document.querySelector(s);
@@ -113,6 +115,10 @@ function migrateState(input){
   if (!Array.isArray(data.categories)) data.categories = [];
 
   data.categories.forEach((cat, ci) => {
+    // Legacy compatibility: v0.2.x/v0.3.x used main/sub.
+    if (!cat.subLabel && cat.sub) cat.subLabel = cat.sub;
+    if (!cat.title && cat.sub) cat.title = cat.sub;
+    if (!cat.mainLabel && cat.main) cat.mainLabel = cat.main;
     if (!cat.id) cat.id = `category-${ci+1}-${slugify(cat.subLabel || cat.title || '')}`;
     if (!Array.isArray(cat.cards)) cat.cards = [];
     if (cat.order == null) cat.order = ci;
@@ -194,6 +200,22 @@ function syncLegacyFields(card){
     }));
 }
 
+
+function setDataSourceBadge(source, detail=''){
+  activeDataSource=source;
+  const el=$('#dataSourceBadge');
+  if(!el)return;
+  el.className='data-source-badge';
+  if(source==='CLOUD')el.classList.add('cloud');
+  else if(source==='LOCAL')el.classList.add('local');
+  else if(source==='ERROR')el.classList.add('error');
+  el.textContent=detail?`${source} · ${detail}`:source;
+}
+
+function validStudyState(x){
+  return !!(x && Array.isArray(x.categories) && x.categories.length);
+}
+
 function setSaveState(mode, label){
   let el = $('#saveState');
   if (!el) {
@@ -244,32 +266,53 @@ function localDatasetKey(){
 }
 
 async function loadData(){
-  if (cloudEnabled()) {
-    try {
-      sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
-      const {data,error} = await sb.from('study_documents')
+  initialLoadError=null;
+
+  if(cloudEnabled()){
+    try{
+      if(!window.supabase?.createClient) throw new Error('Supabase library not loaded');
+
+      sb = sb || window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
+
+      const {data,error}=await sb.from('study_documents')
         .select('payload')
-        .eq('doc_key', CFG.datasetKey || (DEV_MODE ? 'main-dev' : 'main'))
+        .eq('doc_key',CFG.datasetKey || (DEV_MODE?'main-dev':'main'))
         .maybeSingle();
 
-      if (error) throw error;
+      if(error) throw error;
 
-      if (data?.payload) {
-        const migrated = migrateState(data.payload);
+      if(data?.payload && validStudyState(data.payload)){
+        const migrated=migrateState(structuredClone(data.payload));
+
+        // Cloud is authoritative. Local cache is updated only AFTER successful cloud read.
         await idbPut(localDatasetKey(), migrated);
+        setDataSourceBadge('CLOUD', `${migrated.categories.length} categories`);
         return migrated;
       }
-    } catch(e) {
-      console.warn('Cloud load failed; local fallback used.', e);
+
+      throw new Error('Cloud document is empty or invalid');
+    }catch(e){
+      initialLoadError=e;
+      console.error('StudyNurse CLOUD LOAD FAILED:',e);
+      setDataSourceBadge('ERROR','cloud load failed');
     }
   }
 
-  const local = await idbGet(localDatasetKey());
-  if (local) return migrateState(local);
+  const local=await idbGet(localDatasetKey());
+  if(local && validStudyState(local)){
+    const migrated=migrateState(structuredClone(local));
+    setDataSourceBadge('LOCAL',`${migrated.categories.length} categories`);
+    return migrated;
+  }
 
-  const seed = await fetch('./data/seed.json', {cache:'no-store'}).then(r=>r.json());
-  const migrated = migrateState(seed);
-  await idbPut(localDatasetKey(), migrated);
+  const seed=await fetch('./data/seed.json',{cache:'no-store'}).then(r=>{
+    if(!r.ok)throw new Error(`seed HTTP ${r.status}`);
+    return r.json();
+  });
+
+  const migrated=migrateState(seed);
+  await idbPut(localDatasetKey(),migrated);
+  setDataSourceBadge('LOCAL','seed');
   return migrated;
 }
 
@@ -1554,31 +1597,88 @@ function qFacts(){
 }
 function qShuffle(x){return [...x].sort(()=>Math.random()-.5)}
 function makeQuiz(){
- const f=qFacts(),all=state.categories.flatMap(c=>c.cards.flatMap(card=>(card.blocks||[]).filter(b=>b.type==='text').map(b=>({t:qPlain(b.content),card:qPlain(card.title),cat:c.subLabel||c.title,categoryId:c.id,cardId:card.id})))).filter(x=>x.t.length>3);
- const n=Math.min(+$ ('#quizCount').value,f.length*2||0),typ=$('#quizType').value,res=[];
- for(let i=0;i<n;i++){
-  const x=f[Math.floor(Math.random()*f.length)],kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):typ;
-  if(x.q){
-   const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
-   if(wrong.length===3)res.push({kind:'mcq',q:x.q,a:x.t,opts:qShuffle([x.t,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-   continue;
+  const facts=qFacts();
+  const all=state.categories.flatMap(c=>c.cards.flatMap(card=>
+    (card.blocks||[]).filter(b=>b.type==='text').map(b=>({
+      t:qPlain(b.content),
+      card:qPlain(card.title),
+      cat:c.subLabel||c.title,
+      categoryId:c.id,
+      cardId:card.id
+    }))
+  )).filter(x=>x.t.length>3);
+
+  const n=Math.min(+$ ('#quizCount').value,facts.length*2||0);
+  const typ=$('#quizType').value;
+  const res=[];
+
+  for(let i=0;i<n;i++){
+    const x=facts[Math.floor(Math.random()*facts.length)];
+    const kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):typ;
+
+    if(x.q){
+      const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
+      if(wrong.length===3){
+        res.push({
+          kind:'mcq',
+          q:x.q,
+          a:x.t,
+          opts:qShuffle([x.t,...wrong]),
+          src:`${x.cat} > ${x.card}`,
+          categoryId:x.categoryId,
+          cardId:x.cardId
+        });
+      }
+      continue;
+    }
+
+    if(kind==='ox'){
+      // Never ask whether something "belongs to a card".
+      // True: exact stored study statement.
+      // False: only mutate clearly structured Sx/Tx/Cz/Cx statements.
+      const match=x.t.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
+      let statement=x.t;
+      let answer='O';
+
+      if(match && Math.random()<.45){
+        const sameLabelCandidates=all.filter(y=>{
+          const mm=y.t.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
+          return mm && mm[1].toLowerCase()===match[1].toLowerCase() && y.t!==x.t;
+        });
+        const other=qShuffle(sameLabelCandidates)[0];
+        if(other){
+          const otherValue=other.t.replace(/^(Sx|Tx|Cz|Cx):\s*/i,'');
+          statement=`${match[1]}: ${otherValue}`;
+          answer='X';
+        }
+      }
+
+      res.push({
+        kind:'ox',
+        q:`다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.\n${statement}`,
+        a:answer,
+        opts:['O','X'],
+        src:`${x.cat} > ${x.card}`,
+        categoryId:x.categoryId,
+        cardId:x.cardId
+      });
+    }else{
+      const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
+      if(wrong.length===3){
+        res.push({
+          kind:'mcq',
+          q:`다음 중 "${x.card}"의 학습 내용으로 맞는 것은?`,
+          a:x.t,
+          opts:qShuffle([x.t,...wrong]),
+          src:`${x.cat} > ${x.card}`,
+          categoryId:x.categoryId,
+          cardId:x.cardId
+        });
+      }
+    }
   }
-  if(kind==='ox'){
-   // True statements use the exact note. False statements are created only by swapping
-   // a clearly labeled abbreviation value with a value from another fact when possible.
-   const label=x.t.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
-   let question=x.t,answer='O';
-   if(label && Math.random()<.45){
-    const other=qShuffle(all.filter(y=>y.t!==x.t && !y.t.startsWith(label[1]+':')))[0];
-    if(other){question=`${label[1]}: ${other.t.replace(/^(Sx|Tx|Cz|Cx):\s*/i,'')}`;answer='X';}
-   }
-   res.push({kind:'ox',q:`다음 내용이 맞으면 O, 틀리면 X를 선택하세요.\n${question}`,a:answer,opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-  }else{
-   const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);
-   if(wrong.length===3)res.push({kind:'mcq',q:`다음 중 "${x.card}"의 학습 내용으로 맞는 것은?`,a:x.t,opts:qShuffle([x.t,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-  }
- }
- return res;
+
+  return res;
 }
 function jumpToQuizSource(q){
  $('#quizModal').classList.remove('open');
@@ -1593,47 +1693,98 @@ function jumpToQuizSource(q){
 function showQuiz(){const x=quizQuestions[quizIndex];if(!x)return;quizChoice=null;$('#quizProgress').textContent=`문제 ${quizIndex+1} / ${quizQuestions.length}`;$('#quizSource').innerHTML=`출처: <button class="quiz-source-link" data-quiz-source="1">${esc(x.src)}</button>`;$('#quizSource').querySelector('[data-quiz-source]').onclick=()=>jumpToQuizSource(x);$('#quizQuestion').textContent=x.q;$('#quizOptions').innerHTML=x.opts.map((o,i)=>`<button class="quiz-option" data-qchoice="${i}">${i+1}. ${esc(o)}</button>`).join('');$('#quizAnswer').hidden=true;$('#revealQuizBtn').hidden=false;$('#nextQuizBtn').hidden=true;document.querySelectorAll('[data-qchoice]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.quiz-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');quizChoice=x.opts[+b.dataset.qchoice];});}
 function startQuiz(){quizQuestions=makeQuiz();if(!quizQuestions.length)return alert('문제를 만들 수 있는 카드 내용이 부족합니다.');quizIndex=quizScore=0;$('#quizSetup').hidden=true;$('#quizPlay').hidden=false;$('#quizResult').hidden=true;showQuiz();}
 function revealQuiz(){
- const x=quizQuestions[quizIndex],correct=quizChoice===x.a;
- if(correct)quizScore++;
- $('#quizAnswer').hidden=false;
- $('#quizAnswer').innerHTML=`<div class="quiz-feedback ${correct?'correct':'wrong'}">${correct?'✓ 정답':'✕ 오답'}<br>내 선택: ${esc(quizChoice??'선택 안 함')}<br>정답: ${esc(x.a)}</div>`;
- document.querySelectorAll('.quiz-option').forEach(b=>{const value=x.opts[+b.dataset.qchoice];if(value===x.a)b.classList.add('correct');else if(value===quizChoice)b.classList.add('wrong');b.disabled=true;});
- $('#revealQuizBtn').hidden=true;$('#nextQuizBtn').hidden=false;
+  const x=quizQuestions[quizIndex];
+  const correct=quizChoice===x.a;
+  if(correct)quizScore++;
+
+  $('#quizAnswer').hidden=false;
+  $('#quizAnswer').innerHTML=
+    `<div class="quiz-feedback ${correct?'correct':'wrong'}">`+
+    `${correct?'✓ 정답':'✕ 오답'}<br>`+
+    `내 선택: ${esc(quizChoice??'선택 안 함')}<br>`+
+    `정답: ${esc(x.a)}</div>`;
+
+  document.querySelectorAll('.quiz-option').forEach(b=>{
+    const value=x.opts[+b.dataset.qchoice];
+    if(value===x.a)b.classList.add('correct');
+    else if(value===quizChoice)b.classList.add('wrong');
+    b.disabled=true;
+  });
+
+  $('#revealQuizBtn').hidden=true;
+  $('#nextQuizBtn').hidden=false;
 }
 
 async function init(){
-  if (cloudEnabled()) {
-    sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey);
-  }
+  try{
+    $('#envBadge').textContent=DEV_MODE?'DEV':'PROD';
+    $('#envBadge').classList.toggle('dev',DEV_MODE);
+    setDataSourceBadge('LOADING');
 
-  state = migrateState(await loadData());
-  selectedCategory = state.categories[0]?.id || null;
+    if(cloudEnabled() && window.supabase?.createClient){
+      sb=window.supabase.createClient(CFG.supabaseUrl,CFG.supabaseAnonKey);
+    }
 
-  $('#envBadge').textContent = DEV_MODE ? 'DEV' : 'PROD';
-  $('#envBadge').classList.toggle('dev', DEV_MODE);
+    const loaded=await loadData();
+    state=migrateState(structuredClone(loaded));
 
-  bind();
-  render();
+    if(!validStudyState(state)){
+      throw new Error('Loaded state has no categories');
+    }
 
-  if (DEV_MODE && !cloudEnabled()) {
-    setSaveState('', 'DEV · 로컬 저장');
-  } else {
-    setSaveState('', cloudEnabled() ? `${DEV_MODE?'DEV':'PROD'} · 클라우드 연결` : '이 기기에 저장');
-  }
+    // Always select a valid category before the very first render.
+    if(!selectedCategory || !state.categories.some(c=>c.id===selectedCategory)){
+      selectedCategory=state.categories[0].id;
+    }
 
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+    // Critical fix: show data BEFORE optional UI binding.
+    // A binding error must never leave a blank screen.
+    render();
+
+    try{
+      bind();
+    }catch(bindError){
+      console.error('StudyNurse UI BIND ERROR:',bindError);
+      setSaveState('error','일부 UI 연결 오류 · 데이터는 정상 로드됨');
+    }
+
+    // Bind may add handlers; render once more only if basic UI is healthy.
+    try{
+      render();
+    }catch(renderError){
+      console.error('StudyNurse SECOND RENDER ERROR:',renderError);
+    }
+
+    if(activeDataSource==='CLOUD'){
+      setSaveState('',`${DEV_MODE?'DEV':'PROD'} · CLOUD`);
+    }else if(activeDataSource==='LOCAL'){
+      setSaveState('saving',`${DEV_MODE?'DEV':'PROD'} · LOCAL`);
+    }else{
+      setSaveState('error','데이터 로드 오류');
+    }
+
+    if(initialLoadError){
+      console.warn('Cloud fallback reason:',initialLoadError);
+    }
+
+    if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+      navigator.serviceWorker.register('./service-worker.js').catch(e=>console.warn('SW register failed',e));
+    }
+  }catch(e){
+    console.error('=== STUDYNURSE INIT FATAL ===',e,e?.stack);
+    setDataSourceBadge('ERROR','init failed');
+    setSaveState('error','초기화 실패 · Console 확인');
   }
 }
 
-window.addEventListener('beforeunload', e => {
+window.addEventListener('beforeunload' , e => {
   if (!dirty) return;
   e.preventDefault();
   e.returnValue = '';
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.1 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.2 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

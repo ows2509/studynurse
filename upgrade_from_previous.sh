@@ -1,37 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PARENT="$(dirname "$ROOT")"
-PREV=""
-
-for p in \
-  "$PARENT/StudyNurse-v0.4.3" \
-  "$PARENT/StudyNurse-v0.4.2" \
-  "$PARENT/StudyNurse-v0.4.1"
-do
-  if [[ -d "$p/.git" ]]; then PREV="$p"; break; fi
-done
-
-[[ -n "$PREV" ]] || { echo "[ERROR] 이전 Git 폴더 없음"; exit 1; }
-
-for cfg in config.js config.dev.js; do
-  if [[ -f "$PREV/$cfg" ]]; then
-    cp -f "$PREV/$cfg" "$ROOT/$cfg"
-    sed -i 's/version:[[:space:]]*"[^"]*"/version: "0.4.4"/' "$ROOT/$cfg"
-  fi
-done
-
-rm -rf "$ROOT/.git"
-cp -a "$PREV/.git" "$ROOT/.git"
-cd "$ROOT"
-
-git fetch origin
-./verify_version.sh
-
-echo
-echo "준비 완료."
-echo "1) Supabase SQL Editor: supabase_upgrade_0.4.4.sql"
-echo "2) git add -A"
-echo "3) git commit -m 'StudyNurse v0.4.4'"
-echo "4) git rebase origin/main"
-echo "5) git push"
+R="$(cd "$(dirname "${BASH_SOURCE[0]}")"&&pwd)";P="$(dirname "$R")";V=""
+for x in "$P/StudyNurse-v0.4.4" "$P/StudyNurse-v0.4.3" "$P/StudyNurse-v0.4.2";do [[ -d "$x/.git" ]]&&{ V="$x";break;};done
+[[ -n "$V" ]]||{ echo "[ERROR] 이전 Git 없음";exit 1;}
+for c in config.js config.dev.js;do [[ -f "$V/$c" ]]&&{ cp "$V/$c" "$R/$c";sed -i 's/version:[[:space:]]*"[^"]*"/version: "0.4.5"/' "$R/$c";};done
+rm -rf "$R/.git";cp -a "$V/.git" "$R/.git";cd "$R";git fetch origin;./verify_version.sh
+echo "SQL 실행 후: git add -A && git commit -m 'StudyNurse v0.4.5' && git rebase origin/main && git push"

@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.4';
+const APP_VERSION = '0.4.5';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -470,7 +470,8 @@ function renderCard(c){
   const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>`<div class="qsection"><div class="qhead"><span class="date">${esc(q.date||'')}</span><span class="qtitle">${sanitizeRich(q.title||'')}</span>${editing?`<button class="mini-del" data-del-qsection="${c.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>${(q.items||[]).map((it,ii)=>`<div class="qrow"><button class="ox-edit ${it.status==='X'?'x':''}" data-toggle-ox="${c.id}" data-q-index="${qi}" data-item-index="${ii}">${it.status==='X'?'X':'O'}</button><div ${editing?`class="editable" contenteditable="true" data-q-item="${c.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" data-del-qitem="${c.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`).join('')}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qitem="${c.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qsection="${c.id}">+ 기출문제</button></div>`:''}`;
 
   return `
-    <article class="card" aria-editing="${editing}">
+    <article class="card" aria-editing="${editing}" data-card-shell="${c.id}">
+      ${editing ? `<button type="button" class="card-drag-handle" data-card-drag="${c.id}">⋮⋮</button>` : ''}
       <div class="card-head">
         <div ${titleAttrs}>${sanitizeRich(c.title)}</div>
         ${(c.keywords||[]).map(k=>`<span class="badge">${esc(k)}</span>`).join('')}
@@ -649,6 +650,7 @@ function bindDynamic(){
     document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();rerenderPreserveView();});
     document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{findCard(el.dataset.qItem).qbank[+el.dataset.qIndex].items[+el.dataset.itemIndex].content=sanitizeRich(el.innerHTML);markDirty();});
     initCategoryDrag();
+    initCardDrag();
     initDragHandles();
   }
 
@@ -1151,6 +1153,18 @@ function cancelImageModal(){
 function initCategoryDrag(){
  document.querySelectorAll('[data-cat-drag]').forEach(h=>h.onpointerdown=e=>{e.preventDefault();e.stopPropagation();const tab=h.closest('.tab');tab.classList.add('cat-dragging');const mv=ev=>{const hit=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.tab[data-category-id]');if(hit&&hit!==tab){document.querySelectorAll('.tab').forEach(x=>x.classList.remove('cat-drag-over'));hit.classList.add('cat-drag-over');const r=hit.getBoundingClientRect();hit.parentElement.insertBefore(tab,ev.clientX<r.left+r.width/2?hit:hit.nextSibling);}};const up=()=>{document.removeEventListener('pointermove',mv);const ids=[...$('#tabs').querySelectorAll('[data-category-id]')].map(x=>x.dataset.categoryId),map=new Map(state.categories.map(x=>[x.id,x]));state.categories=ids.map((id,i)=>{const x=map.get(id);return x?{...x,order:i}:null}).filter(Boolean);markDirty();render();};document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up,{once:true});});
 }
+function initCardDrag(){
+ document.querySelectorAll('[data-card-drag]').forEach(h=>h.onpointerdown=e=>{
+  if(!editing)return;e.preventDefault();e.stopPropagation();
+  const el=h.closest('.card'),box=el.parentElement,cat=catById(selectedCategory),pid=e.pointerId,sy=e.clientY;let started=false;
+  const mv=ev=>{if(ev.pointerId!==pid)return;ev.preventDefault();if(!started){if(Math.abs(ev.clientY-sy)<6)return;started=true;el.classList.add('card-dragging');}
+   const hit=document.elementFromPoint(ev.clientX,ev.clientY)?.closest('.card');box.querySelectorAll('.card').forEach(x=>x.classList.remove('card-drop-target'));
+   if(hit&&hit!==el&&hit.parentElement===box){const r=hit.getBoundingClientRect();hit.classList.add('card-drop-target');box.insertBefore(el,ev.clientY<r.top+r.height/2?hit:hit.nextSibling);}
+  };
+  const up=ev=>{if(ev.pointerId!==pid)return;document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);el.classList.remove('card-dragging');box.querySelectorAll('.card').forEach(x=>x.classList.remove('card-drop-target'));if(started){const ids=[...box.querySelectorAll('.card')].map(x=>x.dataset.cardShell),map=new Map(cat.cards.map(x=>[x.id,x]));cat.cards=ids.map((id,i)=>{const x=map.get(id);return x?{...x,order:i}:null}).filter(Boolean);markDirty();rerenderPreserveView();}};
+  document.addEventListener('pointermove',mv,{passive:false});document.addEventListener('pointerup',up,{passive:false});
+ });
+}
 function initDragHandles(){
   document.querySelectorAll('.drag-handle').forEach(handle=>{
     handle.addEventListener('pointerdown', onDragStart, {passive:false});
@@ -1609,7 +1623,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.4 intentionally does NOT auto-save on background/visibility changes.
+  // v0.4.5 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

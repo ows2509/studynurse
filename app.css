@@ -120,7 +120,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* StudyNurse v0.4.4 */
+/* StudyNurse v0.4.5 */
 .envbadge{
   font-size:.68rem;font-weight:900;padding:3px 7px;border-radius:8px;
   background:#ecfdf5;color:#047857;border:1px solid #a7f3d0
@@ -211,7 +211,7 @@ button,input,textarea,select{font:inherit}
 }
 
 
-/* v0.4.4 drag bugfix */
+/* v0.4.5 drag bugfix */
 .drag-handle{
   -webkit-tap-highlight-color:transparent;
   touch-action:none !important;
@@ -231,7 +231,7 @@ button,input,textarea,select{font:inherit}
   transition:transform .08s ease;
 }
 
-/* StudyNurse v0.4.4 auto parser */
+/* StudyNurse v0.4.5 auto parser */
 .auto-modalbox{max-width:760px}
 .auto-card-input{min-height:300px!important;line-height:1.45}
 .auto-actions{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 12px}
@@ -252,7 +252,7 @@ button,input,textarea,select{font:inherit}
 .rich-toolbar{position:sticky;top:82px;z-index:18;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:12px;padding:7px;margin:8px 0}.rich-toolbar button{border:1px solid var(--border);background:#fff;padding:5px 8px;border-radius:6px}.rich-toolbar #rtHighlight{background:#fff9c4}.rich-toolbar #rtPink{color:#c2185b}
 .vocab-row,.qrow{display:flex;gap:6px;align-items:flex-start;margin:3px 0}.vocab-row .editable,.qrow .editable{flex:1}.mini-del{display:none;border:0;background:#fff1f2;color:#be123c;border-radius:6px}.editing .mini-del{display:inline-block}.qtools{display:none;gap:6px;margin:6px 0}.editing .qtools{display:flex}.ox-edit{border:1px solid var(--border);background:#fff;width:28px;height:28px;border-radius:50%;font-weight:900}.ox-edit.x{background:#fce7f3;color:#c2185b;border-color:#f9a8d4}.category-drag-handle{display:none;cursor:grab;touch-action:none}.editing .category-drag-handle{display:inline}.cat-dragging{opacity:.45}.cat-drag-over{outline:2px dashed var(--pink)}
 .rich-toolbar[hidden]{display:none!important}.rich-toolbar{position:sticky;top:6px;z-index:120;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}.rich-toolbar button{flex:0 0 auto}@media(max-width:700px){.rich-toolbar{top:4px}}
-/* v0.4.4 sticky edit dock + qbank state preservation */
+/* v0.4.5 sticky edit dock + qbank state preservation */
 .edit-dock[hidden]{display:none!important}
 .edit-dock{
   position:sticky;
@@ -292,3 +292,4 @@ button,input,textarea,select{font:inherit}
   .edit-dock-actions{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}
   .edit-dock-actions .btn{flex:0 0 auto}
 }
+.editing .card{margin-left:38px;overflow:visible}.card-drag-handle{display:none;position:absolute;left:-38px;top:50%;transform:translateY(-50%);width:32px;min-height:58px;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:9px;background:#f7f3ee;color:var(--brown);font-weight:900;cursor:grab;touch-action:none;z-index:4}.editing .card-drag-handle{display:flex}.card.card-dragging{opacity:.48}.card.card-drop-target{outline:2px dashed var(--pink);outline-offset:5px}@media(max-width:700px){.editing .card{margin-left:34px}.card-drag-handle{left:-34px;width:30px;min-height:64px}}

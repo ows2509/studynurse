@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.4.5';
+const APP_VERSION = '0.5.0';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -19,7 +19,7 @@ let pendingImageFile = null;
 let pendingImageBlob = null;
 let pendingImageMeta = null;
 let autoParsedCards = [];
-let qboxOpenState = new Set();
+let qboxOpenState = new Set();let quizQuestions=[],quizIndex=0,quizScore=0,quizChoice=null;
 
 
 const $ = s => document.querySelector(s);
@@ -467,7 +467,7 @@ function renderCard(c){
       </ul>
     </div>` : '';
 
-  const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>`<div class="qsection"><div class="qhead"><span class="date">${esc(q.date||'')}</span><span class="qtitle">${sanitizeRich(q.title||'')}</span>${editing?`<button class="mini-del" data-del-qsection="${c.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>${(q.items||[]).map((it,ii)=>`<div class="qrow"><button class="ox-edit ${it.status==='X'?'x':''}" data-toggle-ox="${c.id}" data-q-index="${qi}" data-item-index="${ii}">${it.status==='X'?'X':'O'}</button><div ${editing?`class="editable" contenteditable="true" data-q-item="${c.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" data-del-qitem="${c.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`).join('')}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qitem="${c.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qsection="${c.id}">+ 기출문제</button></div>`:''}`;
+  const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>`<div class="qsection"><div class="qhead"><span class="date">${esc(q.date||'')}</span>${editing?`<button class="qsection-drag-handle" data-qsection-drag="${c.id}" data-q-index="${qi}">⋮⋮</button>`:''}<span class="qtitle">${sanitizeRich(q.title||'')}</span>${editing?`<button class="mini-del" data-del-qsection="${c.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>${(q.items||[]).map((it,ii)=>`<div class="qrow"><button class="ox-edit ${it.status==='X'?'x':''}" data-toggle-ox="${c.id}" data-q-index="${qi}" data-item-index="${ii}">${it.status==='X'?'X':'O'}</button><div ${editing?`class="editable" contenteditable="true" data-q-item="${c.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" data-del-qitem="${c.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`).join('')}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qitem="${c.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qsection="${c.id}" data-q-type="ox">+ O/X 기출</button><button class="btn btn-soft" type="button" data-add-qa="${c.id}">+ Q&A 기출</button></div>`:''}`;
 
   return `
     <article class="card" aria-editing="${editing}" data-card-shell="${c.id}">
@@ -650,7 +650,11 @@ function bindDynamic(){
     document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();rerenderPreserveView();});
     document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{findCard(el.dataset.qItem).qbank[+el.dataset.qIndex].items[+el.dataset.itemIndex].content=sanitizeRich(el.innerHTML);markDirty();});
     initCategoryDrag();
-    initCardDrag();
+    document.querySelectorAll('[data-add-qa]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQa).qbank.push({type:'qa',date:'기출',title:'Q&A',question:'질문 입력',answer:'정답 입력',items:[]});markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-qa-q]').forEach(x=>x.oninput=()=>{findCard(x.dataset.qaQ).qbank[+x.dataset.qIndex].question=sanitizeRich(x.innerHTML);markDirty();});
+    document.querySelectorAll('[data-qa-a]').forEach(x=>x.oninput=()=>{findCard(x.dataset.qaA).qbank[+x.dataset.qIndex].answer=sanitizeRich(x.innerHTML);markDirty();});
+    document.querySelectorAll('[data-qa-show]').forEach(b=>b.onclick=()=>{const q=findCard(b.dataset.qaShow).qbank[+b.dataset.qIndex],m=document.querySelector(`[data-qa-mask="${b.dataset.qaShow}-${b.dataset.qIndex}"]`);if(b.dataset.open==='1'){m.className='qa-mask';m.textContent='정답';b.textContent='정답 확인';b.dataset.open='0';}else{m.className='';m.innerHTML=sanitizeRich(q.answer);b.textContent='정답 숨기기';b.dataset.open='1';}});
+        initCardDrag();
     initDragHandles();
   }
 
@@ -1532,8 +1536,30 @@ function closeAutoCardModal(){
 }
 
 
+function qPlain(x){return plainTextFromHtml(x||'').trim();}
+function qFacts(){
+ const scope=$('#quizScope').value,cat=catById(selectedCategory),pairs=scope==='all'?state.categories.flatMap(c=>c.cards.map(card=>[c,card])):(cat?cat.cards.map(card=>[cat,card]):[]),out=[];
+ pairs.forEach(([c,card])=>{(card.blocks||[]).filter(b=>b.type==='text').forEach(b=>{const t=qPlain(b.content);if(t.length>3)out.push({t,card:qPlain(card.title),cat:c.subLabel||c.title});});(card.vocab||[]).forEach(v=>{const t=qPlain(v);if(t.length>3)out.push({t,card:qPlain(card.title),cat:c.subLabel||c.title});});(card.qbank||[]).forEach(q=>{if(q.type==='qa'&&q.question&&q.answer)out.push({t:qPlain(q.answer),q:qPlain(q.question),card:qPlain(card.title),cat:c.subLabel||c.title});});});
+ return out;
+}
+function qShuffle(x){return [...x].sort(()=>Math.random()-.5)}
+function makeQuiz(){
+ const f=qFacts(),all=state.categories.flatMap(c=>c.cards.flatMap(card=>(card.blocks||[]).filter(b=>b.type==='text').map(b=>({t:qPlain(b.content),card:qPlain(card.title),cat:c.subLabel||c.title})))).filter(x=>x.t.length>3),n=Math.min(+$ ('#quizCount').value,f.length*2||0),typ=$('#quizType').value,res=[];
+ for(let i=0;i<n;i++){const x=f[Math.floor(Math.random()*f.length)],kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):typ;if(x.q){const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);if(wrong.length===3)res.push({kind:'mcq',q:x.q,a:x.t,opts:qShuffle([x.t,...wrong]),src:`${x.cat} > ${x.card}`});continue;}if(kind==='ox'){const falseQ=Math.random()<.4,other=qShuffle(all.filter(y=>y.t!==x.t))[0];res.push({kind:'ox',q:falseQ&&other?`"${other.t}" 내용은 ${x.card} 카드의 내용이다.`:`"${x.t}" 내용은 ${x.card} 카드의 내용이다.`,a:falseQ&&other?'X':'O',opts:['O','X'],src:`${x.cat} > ${x.card}`});}else{const wrong=qShuffle(all.filter(y=>y.t!==x.t)).slice(0,3).map(y=>y.t);if(wrong.length===3)res.push({kind:'mcq',q:`다음 중 "${x.card}" 카드에 기록된 내용은?`,a:x.t,opts:qShuffle([x.t,...wrong]),src:`${x.cat} > ${x.card}`});}}
+ return res;
+}
+function showQuiz(){const x=quizQuestions[quizIndex];if(!x)return;quizChoice=null;$('#quizProgress').textContent=`문제 ${quizIndex+1} / ${quizQuestions.length}`;$('#quizSource').textContent=`출처: ${x.src}`;$('#quizQuestion').textContent=x.q;$('#quizOptions').innerHTML=x.opts.map((o,i)=>`<button class="quiz-option" data-qchoice="${i}">${i+1}. ${esc(o)}</button>`).join('');$('#quizAnswer').hidden=true;$('#revealQuizBtn').hidden=false;$('#nextQuizBtn').hidden=true;document.querySelectorAll('[data-qchoice]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.quiz-option').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');quizChoice=x.opts[+b.dataset.qchoice];});}
+function startQuiz(){quizQuestions=makeQuiz();if(!quizQuestions.length)return alert('문제를 만들 수 있는 카드 내용이 부족합니다.');quizIndex=quizScore=0;$('#quizSetup').hidden=true;$('#quizPlay').hidden=false;$('#quizResult').hidden=true;showQuiz();}
+function revealQuiz(){const x=quizQuestions[quizIndex];$('#quizAnswer').hidden=false;$('#quizAnswer').textContent=`정답: ${x.a}`;if(quizChoice===x.a)quizScore++;$('#revealQuizBtn').hidden=true;$('#nextQuizBtn').hidden=false;}
+function nextQuiz(){quizIndex++;if(quizIndex>=quizQuestions.length){$('#quizPlay').hidden=true;$('#quizResult').hidden=false;$('#quizResult').innerHTML=`<div class="quiz-result"><b>${quizQuestions.length}문제 중 ${quizScore}문제 정답</b><br>정답률 ${Math.round(quizScore/quizQuestions.length*100)}%</div>`;return;}showQuiz();}
+
 function bind(){
   $('#searchInput').addEventListener('input', render);
+  $('#quizBtn').onclick=()=>{$('#quizModal').classList.add('open');$('#quizSetup').hidden=false;$('#quizPlay').hidden=true;$('#quizResult').hidden=true;};
+  $('#closeQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
+  $('#exitQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
+  $('#startQuizBtn').onclick=startQuiz;$('#revealQuizBtn').onclick=revealQuiz;$('#nextQuizBtn').onclick=nextQuiz;
+
   $('#editBtn').onclick = toggleEdit;
   $('#saveBtn').onclick = () => persistData(true);
   $('#autoCardBtn').onclick = openAutoCardModal;
@@ -1623,7 +1649,7 @@ window.addEventListener('beforeunload', e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.4.5 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.0 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

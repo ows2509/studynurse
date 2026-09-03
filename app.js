@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.3';
+const APP_VERSION = '0.5.4';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1715,6 +1715,139 @@ function revealQuiz(){
   $('#nextQuizBtn').hidden=false;
 }
 
+
+function countStateCards(){
+  return (state?.categories||[]).reduce((n,c)=>n+(c.cards?.length||0),0);
+}
+function diagClass(ok,warn=false){return ok?'diag-ok':warn?'diag-warn':'diag-err';}
+function renderDiagnostics(){
+  const editBtn=$('#editBtn'),quizBtn=$('#quizBtn');
+  const data=[
+    ['Version',CFG.version||'?',true],
+    ['Environment',DEV_MODE?'DEV':'PROD',true],
+    ['Data Source',activeDataSource||'?',activeDataSource==='CLOUD',activeDataSource==='LOCAL'],
+    ['Categories',String(state?.categories?.length||0),(state?.categories?.length||0)>0],
+    ['Cards',String(countStateCards()),countStateCards()>0],
+    ['Selected Category',selectedCategory||'(none)',!!selectedCategory],
+    ['Edit handler',String(typeof editBtn?.onclick),typeof editBtn?.onclick==='function'],
+    ['Quiz handler',String(typeof quizBtn?.onclick),typeof quizBtn?.onclick==='function'],
+    ['Card DND handles',String(document.querySelectorAll('[data-card-drag]').length),true],
+    ['QBank DND handles',String(document.querySelectorAll('[data-qsection-drag]').length),true],
+    ['Service Worker',navigator.serviceWorker?.controller?'controlled':'not controlled',true],
+    ['Cloud enabled',String(cloudEnabled()),cloudEnabled()]
+  ];
+  $('#diagGrid').innerHTML=data.map(([k,v,ok,warn])=>
+    `<div class="diag-item"><b>${esc(k)}</b><span class="${diagClass(ok,warn)}">${esc(v)}</span></div>`
+  ).join('');
+  $('#diagLog').textContent=
+    `bind defined: ${typeof bind}\n`+
+    `render defined: ${typeof render}\n`+
+    `editBtn exists: ${!!editBtn}\n`+
+    `quizBtn exists: ${!!quizBtn}\n`+
+    `initialLoadError: ${initialLoadError ? (initialLoadError.message||initialLoadError) : 'none'}`;
+}
+async function testDiagnosticCloud(){
+  const log=$('#diagLog');
+  try{
+    log.textContent='Supabase 읽기 테스트 중...';
+    const cfg=window.STUDYNURSE_CONFIG;
+    const r=await fetch(`${cfg.supabaseUrl}/rest/v1/study_documents?doc_key=eq.${encodeURIComponent(cfg.datasetKey)}&select=doc_key,payload,updated_at`,{
+      headers:{apikey:cfg.supabaseAnonKey,Authorization:`Bearer ${cfg.supabaseAnonKey}`}
+    });
+    const rows=await r.json();
+    const payload=rows?.[0]?.payload;
+    const cards=(payload?.categories||[]).reduce((n,c)=>n+(c.cards?.length||0),0);
+    log.textContent=
+      `HTTP: ${r.status}\n`+
+      `rows: ${rows.length}\n`+
+      `version: ${payload?.version}\n`+
+      `categories: ${payload?.categories?.length}\n`+
+      `cards: ${cards}\n`+
+      `updated_at: ${rows?.[0]?.updated_at||''}`;
+  }catch(e){
+    log.textContent='ERROR: '+(e?.stack||e);
+  }
+}
+
+function bind(){
+  $('#searchInput').addEventListener('input', render);
+  $('#editBtn').onclick = toggleEdit;
+  $('#saveBtn').onclick = () => persistData(true);
+  $('#autoCardBtn').onclick = openAutoCardModal;
+  $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff59d'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
+  $('#richToolbar').addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});
+  document.addEventListener('selectionchange',()=>{if(!editing)return;const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e)){rememberRichSelection();showRichToolbar();}});
+  document.addEventListener('focusin',e=>{if(editing&&isRichEditable(e.target))setTimeout(updateRichToolbarContext,0);});
+  document.addEventListener('pointerdown',e=>{if(!editing||e.target.closest('#richToolbar')||isRichEditable(e.target))return;setTimeout(updateRichToolbarContext,0);});
+
+
+  $('#addCardBtn').onclick = () => {
+    if (!editing) startEdit();
+    $('#cardModal').classList.add('open');
+  };
+  $('#closeCardBtn').onclick = () => $('#cardModal').classList.remove('open');
+  $('#createCardBtn').onclick = createCard;
+
+  $('#closeCategoryBtn').onclick = () => {
+    $('#categoryModal').classList.remove('open');
+    categoryEditId = null;
+  };
+  $('#saveCategoryBtn').onclick = saveCategory;
+
+  $('#previewHtmlBtn').onclick = previewHtml;
+  $('#applyHtmlBtn').onclick = applyHtml;
+  $('#closeHtmlBtn').onclick = () => {
+    $('#htmlModal').classList.remove('open');
+    htmlTargetCardId = null;
+  };
+  $('#htmlEditor').addEventListener('input', previewHtml);
+
+  $('#imageInput').addEventListener('change', e => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    if (!f.type.startsWith('image/')) return alert('이미지 파일만 사용할 수 있습니다.');
+    if (f.size > 30 * 1024 * 1024) return alert('원본 이미지는 30MB 이하로 사용하세요.');
+    openImageSettings(f).catch(err => alert(err.message || err));
+  });
+
+  ['imageProfile','imageRotate','cropLeft','cropRight','cropTop','cropBottom'].forEach(id=>{
+    $('#' + id).addEventListener('input', () => {
+      processPendingImage().catch(console.error);
+    });
+  });
+
+  $('#uploadImageBtn').onclick = uploadPreparedImage;
+  $('#cancelImageBtn').onclick = cancelImageModal;
+
+  $('#previewAutoCardsBtn').onclick = renderAutoPreview;
+  $('#createAutoCardsBtn').onclick = createCardsFromAutoText;
+  $('#closeAutoCardsBtn').onclick = closeAutoCardModal;
+  $('#autoCardInput').addEventListener('input', () => {
+    autoParsedCards = [];
+    $('#createAutoCardsBtn').disabled = true;
+  });
+  $('#quizBtn').onclick=()=>{
+    $('#quizModal').classList.add('open');
+    $('#quizSetup').hidden=false;
+    $('#quizPlay').hidden=true;
+    $('#quizResult').hidden=true;
+  };
+  $('#closeQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
+  $('#exitQuizBtn').onclick=()=>$('#quizModal').classList.remove('open');
+  $('#startQuizBtn').onclick=startQuiz;
+  $('#revealQuizBtn').onclick=revealQuiz;
+  $('#nextQuizBtn').onclick=nextQuiz;
+
+  $('#diagBtn').onclick=()=>{
+    $('#diagModal').classList.add('open');
+    renderDiagnostics();
+  };
+  $('#diagRefreshBtn').onclick=renderDiagnostics;
+  $('#diagCloudBtn').onclick=testDiagnosticCloud;
+  $('#diagCloseBtn').onclick=()=>$('#diagModal').classList.remove('open');
+
+}
+
 async function init(){
   try{
     $('#envBadge').textContent=DEV_MODE?'DEV':'PROD';
@@ -1778,7 +1911,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.3 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.4 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

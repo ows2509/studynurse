@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.5.3</title>
+<title>StudyNurse v0.5.4</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -14,12 +14,12 @@
 <div class="app" id="app">
   <div class="topbar">
     <div class="brandrow">
-      <div class="brand">StudyNurse <small id="appVersion">v0.5.3</small></div>
+      <div class="brand">StudyNurse <small id="appVersion">v0.5.4</small></div>
       <span class="modebadge" id="modeBadge">VIEW</span>
       <span class="envbadge" id="envBadge">PROD</span>
       <span class="spacer"></span>
       <div class="top-actions" id="topActions">
-        <button class="btn btn-soft" id="quizBtn">🎯 퀴즈</button><button class="btn btn-soft" id="editBtn">편집</button>
+        <button class="btn btn-soft" id="diagBtn">진단</button><button class="btn btn-soft" id="quizBtn">🎯 퀴즈</button><button class="btn btn-soft" id="editBtn">편집</button>
         <button class="btn btn-soft" id="autoCardBtn" hidden>⚡ 자동정리</button>
         <button class="btn btn-primary" id="saveBtn" hidden>저장</button>
       </div>
@@ -189,7 +189,21 @@ VOCAB: anaphylaxis - 아나필락시스
   </div>
 </div>
 
-<div class="modal" id="quizModal"><div class="modalbox"><h3>🎯 랜덤 문제</h3><div id="quizSetup"><div class="field"><label>유형</label><select id="quizType"><option value="mixed">랜덤</option><option value="ox">O/X</option><option value="mcq">4지선다</option></select></div><div class="field"><label>범위</label><select id="quizScope"><option value="category">현재 카테고리</option><option value="all">전체</option></select></div><div class="field"><label>문제 수</label><select id="quizCount"><option>5</option><option selected>10</option><option>20</option></select></div><button class="btn btn-pink" id="startQuizBtn">시작</button><button class="btn btn-soft" id="closeQuizBtn">닫기</button></div><div id="quizPlay" hidden><div id="quizProgress"></div><div id="quizSource"></div><div class="quiz-question" id="quizQuestion"></div><div id="quizOptions"></div><div class="quiz-answer" id="quizAnswer" hidden></div><button class="btn btn-soft" id="revealQuizBtn">정답 확인</button><button class="btn btn-primary" id="nextQuizBtn" hidden>다음</button><button class="btn btn-soft" id="exitQuizBtn">종료</button></div><div id="quizResult" hidden></div></div></div><script src="./config.js"></script>
+<div class="modal" id="quizModal"><div class="modalbox"><h3>🎯 랜덤 문제</h3><div id="quizSetup"><div class="field"><label>유형</label><select id="quizType"><option value="mixed">랜덤</option><option value="ox">O/X</option><option value="mcq">4지선다</option></select></div><div class="field"><label>범위</label><select id="quizScope"><option value="category">현재 카테고리</option><option value="all">전체</option></select></div><div class="field"><label>문제 수</label><select id="quizCount"><option>5</option><option selected>10</option><option>20</option></select></div><button class="btn btn-pink" id="startQuizBtn">시작</button><button class="btn btn-soft" id="closeQuizBtn">닫기</button></div><div id="quizPlay" hidden><div id="quizProgress"></div><div id="quizSource"></div><div class="quiz-question" id="quizQuestion"></div><div id="quizOptions"></div><div class="quiz-answer" id="quizAnswer" hidden></div><button class="btn btn-soft" id="revealQuizBtn">정답 확인</button><button class="btn btn-primary" id="nextQuizBtn" hidden>다음</button><button class="btn btn-soft" id="exitQuizBtn">종료</button></div><div id="quizResult" hidden></div></div></div>
+<div class="modal" id="diagModal">
+  <div class="modalbox">
+    <h3>StudyNurse 진단</h3>
+    <div class="diag-grid" id="diagGrid"></div>
+    <div class="diag-actions">
+      <button class="btn btn-soft" id="diagRefreshBtn">다시 검사</button>
+      <button class="btn btn-soft" id="diagCloudBtn">Supabase 읽기 테스트</button>
+      <button class="btn btn-soft" id="diagCloseBtn">닫기</button>
+    </div>
+    <pre class="diag-log" id="diagLog"></pre>
+  </div>
+</div>
+
+<script src="./config.js"></script>
 <script src="./config.dev.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./app.js"></script>

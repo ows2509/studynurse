@@ -1,25 +1,24 @@
-# StudyNurse v0.5.3 Hotfix
+# StudyNurse v0.5.4 Hotfix
 
-v0.5.2에서 데이터는 정상 표시되지만 편집/퀴즈 버튼이 동작하지 않는 문제 수정.
-
-원인:
-초기화가 render() -> bind() -> render() 순서였고,
-마지막 render()가 이벤트가 연결된 버튼 DOM을 다시 생성했습니다.
+원인 확정:
+v0.5.3 app.js에서 bind() 함수 정의가 누락되어 데이터는 보이지만 편집/퀴즈 버튼이 무반응이었습니다.
 
 수정:
-- 초기화 순서를 render() -> bind()로 고정
-- 마지막 중복 render 제거
-- v0.5.2 CLOUD 로딩/DND/퀴즈 수정 유지
-- 기존 DB 비파괴
+- v0.4.5의 검증된 bind() 복원
+- v0.5.x 퀴즈 이벤트 연결 추가
+- 진단 버튼 추가
+- 진단 화면에서 Version / CLOUD-LOCAL / Category/Card 수 / 편집·퀴즈 onclick / DND 핸들 / Service Worker 상태 확인
+- Supabase 직접 읽기 테스트 버튼 추가
+- 기존 CLOUD 95카드 로딩, DB 비파괴 유지
 
-WSL:
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.3
+배포:
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.4
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
 
-Supabase: supabase_upgrade_0.5.3.sql
+Supabase: supabase_upgrade_0.5.4.sql
 
 git add -A
-git commit -m "StudyNurse v0.5.3"
+git commit -m "StudyNurse v0.5.4"
 git rebase origin/main
 git push

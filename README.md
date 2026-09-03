@@ -1,17 +1,20 @@
-# StudyNurse v0.5.0
-- StudyNurse 제목 옆 버전 상시 표시
-- 기존 카드/문단/카테고리 DND 유지
-- Q&A 기출: 질문/정답 편집, VIEW에서 정답 마스킹/확인
-- 랜덤 퀴즈: OX / 4지선다 / 혼합, 현재 카테고리 또는 전체
-- 카드 내용/VOCAB/Q&A만 문제 재료로 사용
-- 정답 확인 및 출처 카드 표시, 종료 시 퀴즈 폐기
-- 기존 DB 비파괴/수동 저장 정책 유지
+# StudyNurse v0.5.1
+- 카드 전체 DND ⋮⋮ 강제 표시 CSS 수정
+- 기출 세트 DND ⋮⋮ 강제 표시 및 DND
+- O/X 문제: '카드의 내용이다' 메타문구 제거
+- 실제 학습 명제를 O/X로 제시
+- 안전하게 반전 가능한 Sx/Tx/Cz/Cx 형식만 X 변형 대상으로 사용
+- 정답 확인 시 ✓ 정답 / ✕ 오답, 내 선택, 실제 정답 표시
+- 선택지 정답/오답 시각 표시
+- 출처는 카테고리 > 카드 형태 유지
+- 출처 클릭 시 해당 카테고리/카드로 이동 후 카드 강조
+- 기존 Q&A, 4지선다, 수동 저장, DB 비파괴 유지
 
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.0
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.1
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
-Supabase: supabase_upgrade_0.5.0.sql
+Supabase: supabase_upgrade_0.5.1.sql
 git add -A
-git commit -m "StudyNurse v0.5.0"
+git commit -m "StudyNurse v0.5.1"
 git rebase origin/main
 git push

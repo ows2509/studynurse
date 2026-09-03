@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.2';
+const APP_VERSION = '0.5.3';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1737,8 +1737,9 @@ async function init(){
       selectedCategory=state.categories[0].id;
     }
 
-    // Critical fix: show data BEFORE optional UI binding.
-    // A binding error must never leave a blank screen.
+    // Render the data once, then bind static UI controls.
+    // Do not render again here: a second render recreates the button DOM
+    // and removes the click handlers attached by bind().
     render();
 
     try{
@@ -1746,13 +1747,6 @@ async function init(){
     }catch(bindError){
       console.error('StudyNurse UI BIND ERROR:',bindError);
       setSaveState('error','일부 UI 연결 오류 · 데이터는 정상 로드됨');
-    }
-
-    // Bind may add handlers; render once more only if basic UI is healthy.
-    try{
-      render();
-    }catch(renderError){
-      console.error('StudyNurse SECOND RENDER ERROR:',renderError);
     }
 
     if(activeDataSource==='CLOUD'){
@@ -1784,7 +1778,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.2 intentionally does NOT auto-save on background/visibility changes.
+  // v0.5.3 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

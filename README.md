@@ -1,30 +1,25 @@
-# StudyNurse v0.5.2 Emergency Build
+# StudyNurse v0.5.3 Hotfix
 
-## 핵심 수정
-- Supabase CLOUD 데이터를 초기 화면에 먼저 렌더링
-- bind() 오류가 발생해도 학습 데이터 화면은 유지
-- selectedCategory가 없거나 유효하지 않으면 첫 카테고리 자동 선택
-- CLOUD 성공 후 LOCAL 데이터가 다시 화면을 덮지 않음
-- 데이터 소스 배지: CLOUD / LOCAL / ERROR
-- legacy category: main/sub → mainLabel/subLabel/title 호환
-- 카드 전체 DND 핸들 강제 표시
-- 기출 세트 DND 핸들 강제 표시
-- O/X "○○ 카드의 내용이다" 문장 제거
-- O/X는 실제 학습 명제 참/거짓 방식
-- 정답/오답/내 선택/정답 표시
-- 출처 클릭 시 해당 카드로 이동 + 강조
-- Service Worker chrome-extension Cache 오류 차단
-- 기존 DB/95개 카드 비파괴
+v0.5.2에서 데이터는 정상 표시되지만 편집/퀴즈 버튼이 동작하지 않는 문제 수정.
 
-## 배포
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.2
+원인:
+초기화가 render() -> bind() -> render() 순서였고,
+마지막 render()가 이벤트가 연결된 버튼 DOM을 다시 생성했습니다.
+
+수정:
+- 초기화 순서를 render() -> bind()로 고정
+- 마지막 중복 render 제거
+- v0.5.2 CLOUD 로딩/DND/퀴즈 수정 유지
+- 기존 DB 비파괴
+
+WSL:
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.5.3
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
 
-Supabase:
-supabase_upgrade_0.5.2.sql
+Supabase: supabase_upgrade_0.5.3.sql
 
 git add -A
-git commit -m "StudyNurse v0.5.2"
+git commit -m "StudyNurse v0.5.3"
 git rebase origin/main
 git push

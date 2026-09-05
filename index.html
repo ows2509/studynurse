@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.6.1</title>
+<title>StudyNurse v0.6.2</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -14,7 +14,7 @@
 <div class="app" id="app">
   <div class="topbar">
     <div class="brandrow">
-      <div class="brand">StudyNurse <small id="appVersion">v0.6.1</small></div>
+      <div class="brand">StudyNurse <small id="appVersion">v0.6.2</small></div>
       <span class="modebadge" id="modeBadge">VIEW</span>
       <span class="envbadge" id="envBadge">PROD</span>
       <span class="spacer"></span>
@@ -200,6 +200,15 @@ VOCAB: anaphylaxis - 아나필락시스
       <button class="btn btn-soft" id="diagCloseBtn">닫기</button>
     </div>
     <pre class="diag-log" id="diagLog"></pre>
+  </div>
+</div>
+
+
+<div class="quiz-mini-bar" id="quizMiniBar" hidden>
+  <div class="quiz-mini-title">퀴즈가 잠시 최소화되었습니다.</div>
+  <div class="quiz-mini-progress" id="quizMiniProgress">문제</div>
+  <div class="quiz-mini-actions">
+    <button class="btn btn-soft" type="button" id="resumeQuizBtn">퀴즈 계속</button>
   </div>
 </div>
 

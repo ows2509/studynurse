@@ -1,4 +1,4 @@
-# StudyNurse v0.6.0 Production Release
+# StudyNurse v0.6.1 Production Release
 
 - 신규 카테고리 클릭 안정화
 - 기출 날짜/제목/내용 Rich Text 편집
@@ -10,11 +10,11 @@
 - 기존 DB 비파괴
 
 배포:
-cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.6.0
+cd /mnt/c/ows/CODING/Studynurse/StudyNurse-v0.6.1
 chmod +x upgrade_from_previous.sh verify_version.sh serve_wsl.sh
 ./upgrade_from_previous.sh
-Supabase: supabase_upgrade_0.6.0.sql
+Supabase: supabase_upgrade_0.6.1.sql
 git add -A
-git commit -m "StudyNurse v0.6.0"
+git commit -m "StudyNurse v0.6.1"
 git rebase origin/main
 git push

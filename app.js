@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.5.6';
+const APP_VERSION = '0.6.0';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -134,6 +134,19 @@ function migrateState(input){
       if (!Array.isArray(card.translations)) card.translations = [];
       if (!Array.isArray(card.images)) card.images = [];
       if (!Array.isArray(card.qbank)) card.qbank = [];
+      card.qbank.forEach(q=>{
+        if(!q||typeof q!=='object')return;
+        if(typeof q.date!=='string')q.date=q.date==null?'':String(q.date);
+        if(typeof q.title!=='string')q.title=q.title==null?'':String(q.title);
+        if(q.type==='qa'){
+          if(typeof q.question!=='string')q.question=q.question==null?'':String(q.question);
+          if(typeof q.answer!=='string')q.answer=q.answer==null?'':String(q.answer);
+          if(!Array.isArray(q.items))q.items=[];
+        }else{
+          if(!Array.isArray(q.items))q.items=[];
+          q.items.forEach(item=>{if(!item||typeof item!=='object')return;const st=String(item.status||'O').toUpperCase();item.status=['O','X','-'].includes(st)?st:'O';if(typeof item.content!=='string')item.content=item.content==null?'':String(item.content);});
+        }
+      });
       if (typeof card.customHtml !== 'string') card.customHtml = '';
       if (card.order == null) card.order = i;
 
@@ -462,43 +475,15 @@ function findBlock(card, blockId){
 }
 
 function collectEditable(){
-  document.querySelectorAll('[data-card][data-field]').forEach(el => {
-    const card = findCard(el.dataset.card);
-    if (!card) return;
-
-    const field = el.dataset.field;
-    if (field === 'title') card.title = sanitizeRich(el.innerHTML);
-
-    if (field === 'block') {
-      const block = findBlock(card, el.dataset.block);
-      if (block) block.content = sanitizeRich(autoBoldAbbreviations(el.innerHTML));
-    }
-
-    if (field.startsWith('vocab:')) {
-      card.vocab[+field.split(':')[1]] = sanitizeRich(el.innerHTML);
-    }
-    if (field.startsWith('trans:')) {
-      card.translations[+field.split(':')[1]] = sanitizeRich(el.innerHTML);
-    }
-    syncLegacyFields(card);
-  });
+  document.querySelectorAll('[data-card][data-field]').forEach(el=>{const card=findCard(el.dataset.card);if(!card)return;const field=el.dataset.field;if(field==='title')card.title=sanitizeRich(el.innerHTML);if(field==='block'){const block=findBlock(card,el.dataset.block);if(block)block.content=sanitizeRich(autoBoldAbbreviations(el.innerHTML));}if(field.startsWith('vocab:'))card.vocab[+field.split(':')[1]]=sanitizeRich(el.innerHTML);if(field.startsWith('trans:'))card.translations[+field.split(':')[1]]=sanitizeRich(el.innerHTML);syncLegacyFields(card);});
+  document.querySelectorAll('[data-q-date]').forEach(el=>{const q=findCard(el.dataset.qDate)?.qbank?.[+el.dataset.qIndex];if(q)q.date=sanitizeRich(el.innerHTML);});
+  document.querySelectorAll('[data-q-title]').forEach(el=>{const q=findCard(el.dataset.qTitle)?.qbank?.[+el.dataset.qIndex];if(q)q.title=sanitizeRich(el.innerHTML);});
+  document.querySelectorAll('[data-q-item]').forEach(el=>{const it=findCard(el.dataset.qItem)?.qbank?.[+el.dataset.qIndex]?.items?.[+el.dataset.itemIndex];if(it)it.content=sanitizeRich(el.innerHTML);});
+  document.querySelectorAll('[data-qa-q]').forEach(el=>{const q=findCard(el.dataset.qaQ)?.qbank?.[+el.dataset.qIndex];if(q)q.question=sanitizeRich(el.innerHTML);});
+  document.querySelectorAll('[data-qa-a]').forEach(el=>{const q=findCard(el.dataset.qaA)?.qbank?.[+el.dataset.qIndex];if(q)q.answer=sanitizeRich(el.innerHTML);});
 }
 
-function searchCard(c,q){
-  const blockText = (c.blocks||[]).map(b => b.type === 'image' ? '' : (b.content||''));
-  const s = [
-    c.title,
-    ...(c.keywords||[]),
-    ...blockText,
-    ...(c.vocab||[]),
-    ...(c.translations||[]),
-    ...((c.qbank||[]).flatMap(x => [
-      x.date, x.title, ...((x.items||[]).map(i=>i.content))
-    ]))
-  ].join(' ');
-
-  return plainTextFromHtml(s).toLowerCase().includes(q);
-}
+function searchCard(c,q){const blockText=(c.blocks||[]).map(b=>b.type==='image'?'':(b.content||''));const qText=(c.qbank||[]).flatMap(x=>[x.date,x.title,x.question,x.answer,...((x.items||[]).map(i=>i.content))]);return plainTextFromHtml([c.title,...(c.keywords||[]),...blockText,...(c.vocab||[]),...(c.translations||[]),...qText].join(' ')).toLowerCase().includes(q);}
 
 function renderBlock(card, block){
   const drag = editing
@@ -557,6 +542,16 @@ function renderBlock(card, block){
     </div>`;
 }
 
+function qStatusView(status){const st=['O','X','-'].includes(String(status||'').toUpperCase())?String(status).toUpperCase():'O';const cls=st==='X'?'status-x':st==='-'?'status-ref':'status-o';return `<span class="q-status-view ${cls}">${st}</span>`;}
+function renderQSection(card,q,qi){
+ const isQa=q.type==='qa';
+ const date=editing?`<span class="date editable" contenteditable="true" data-q-date="${card.id}" data-q-index="${qi}">${sanitizeRich(q.date||'')}</span>`:`<span class="date">${sanitizeRich(q.date||'')}</span>`;
+ const title=editing?`<span class="qtitle editable" contenteditable="true" data-q-title="${card.id}" data-q-index="${qi}">${sanitizeRich(q.title||'')}</span>`:`<span class="qtitle">${sanitizeRich(q.title||'')}</span>`;
+ const head=`<div class="qhead">${editing?`<button class="qsection-drag-handle" type="button" data-qsection-drag="${card.id}" data-q-index="${qi}">⋮⋮</button>`:''}${date}${title}${editing?`<button class="mini-del" type="button" data-del-qsection="${card.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>`;
+ if(isQa)return `<div class="qsection" data-q-index="${qi}">${head}<div class="qa-row"><b>Q)</b><div ${editing?`class="editable" contenteditable="true" data-qa-q="${card.id}" data-q-index="${qi}"`:''}>${sanitizeRich(q.question||'')}</div></div><div class="qa-row"><b>A)</b>${editing?`<div class="editable" contenteditable="true" data-qa-a="${card.id}" data-q-index="${qi}">${sanitizeRich(q.answer||'')}</div>`:`<span class="qa-mask" data-qa-mask="${card.id}-${qi}">▒▒▒▒▒▒▒▒</span><button class="btn btn-soft" type="button" data-qa-show="${card.id}" data-q-index="${qi}" data-open="0">정답 확인</button>`}</div></div>`;
+ const items=(q.items||[]).map((it,ii)=>{const st=['O','X','-'].includes(String(it.status||'').toUpperCase())?String(it.status).toUpperCase():'O';const status=editing?`<select class="q-status-select" data-q-status="${card.id}" data-q-index="${qi}" data-item-index="${ii}"><option value="O" ${st==='O'?'selected':''}>O</option><option value="X" ${st==='X'?'selected':''}>X</option><option value="-" ${st==='-'?'selected':''}>-</option></select>`:qStatusView(st);return `<div class="qrow">${status}<div ${editing?`class="editable" contenteditable="true" data-q-item="${card.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" type="button" data-del-qitem="${card.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`;}).join('');
+ return `<div class="qsection" data-q-index="${qi}">${head}${items}${editing?`<div class="qtools"><button class="btn btn-soft" type="button" data-add-qitem="${card.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`;
+}
 function renderCard(c){
   const titleAttrs = editing
     ? `class="card-title editable" contenteditable="true" data-card="${c.id}" data-field="title"`
@@ -576,7 +571,7 @@ function renderCard(c){
       </ul>
     </div>` : '';
 
-  const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>`<div class="qsection"><div class="qhead"><span class="date">${esc(q.date||'')}</span>${editing?`<button class="qsection-drag-handle" data-qsection-drag="${c.id}" data-q-index="${qi}">⋮⋮</button>`:''}<span class="qtitle">${sanitizeRich(q.title||'')}</span>${editing?`<button class="mini-del" data-del-qsection="${c.id}" data-q-index="${qi}">기출삭제</button>`:''}</div>${(q.items||[]).map((it,ii)=>`<div class="qrow"><button class="ox-edit ${it.status==='X'?'x':''}" data-toggle-ox="${c.id}" data-q-index="${qi}" data-item-index="${ii}">${it.status==='X'?'X':'O'}</button><div ${editing?`class="editable" contenteditable="true" data-q-item="${c.id}" data-q-index="${qi}" data-item-index="${ii}"`:''}>${sanitizeRich(it.content||'')}</div>${editing?`<button class="mini-del" data-del-qitem="${c.id}" data-q-index="${qi}" data-item-index="${ii}">✕</button>`:''}</div>`).join('')}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qitem="${c.id}" data-q-index="${qi}">+ 항목</button></div>`:''}</div>`).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" data-add-qsection="${c.id}" data-q-type="ox">+ O/X 기출</button><button class="btn btn-soft" type="button" data-add-qa="${c.id}">+ Q&A 기출</button></div>`:''}`;
+  const qb=`${(c.qbank||[]).length?`<button class="qtoggle">▼ 관련 문제 / 기출 (${c.qbank.length})</button><div class="qbox">${c.qbank.map((q,qi)=>renderQSection(c,q,qi)).join('')}</div>`:''}${editing?`<div class="qtools"><button class="btn btn-soft" type="button" data-add-qsection="${c.id}" data-q-type="ox">+ O/X/- 기출</button><button class="btn btn-soft" type="button" data-add-qa="${c.id}">+ Q&A 기출</button></div>`:''}`;
 
   return `
     <article class="card" aria-editing="${editing}" data-card-shell="${c.id}">
@@ -666,15 +661,11 @@ function render(){
 
   $('#tabs').innerHTML =
     state.categories.map(c=>`
-      <button class="tab ${c.id===selectedCategory?'active':''}" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span ${editing?`contenteditable="true" data-cat-name="${esc(c.id)}"`:''}>${esc(c.subLabel||c.title)}</span></button>`).join('') +
+      <button class="tab ${c.id===selectedCategory?'active':''}" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span>${esc(c.subLabel||c.title)}</span></button>`).join('') +
     (editing ? `<button class="tab tab-add" id="addCategoryBtn" title="카테고리 추가">＋</button>` : '');
 
   $('#tabs').querySelectorAll('.tab[data-cat]').forEach(b=>{
-    b.onclick = () => {
-      collectEditable();
-      selectedCategory = b.dataset.cat;
-      render();
-    };
+    b.onclick=e=>{if(e.target.closest('[data-cat-drag]'))return;collectEditable();const id=b.dataset.cat;if(!catById(id))return;selectedCategory=id;render();};
   });
 
   if ($('#addCategoryBtn')) $('#addCategoryBtn').onclick = () => openCategoryModal();
@@ -751,18 +742,18 @@ function bindDynamic(){
     if ($('#deleteCategoryBtn')) $('#deleteCategoryBtn').onclick = () => deleteCategory(cat.id);
 
     document.querySelectorAll('[data-del-vocab]').forEach(b=>b.onclick=e=>{e.stopPropagation();findCard(b.dataset.delVocab).vocab.splice(+b.dataset.index,1);markDirty();render();});
-    document.querySelectorAll('[data-cat-name]').forEach(el=>{el.onclick=e=>e.stopPropagation();el.oninput=()=>{const c=catById(el.dataset.catName);c.subLabel=el.textContent.trim();c.title=c.subLabel;markDirty();};});
     document.querySelectorAll('[data-add-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQsection).qbank.push({date:'기출',title:'새 기출 주제',items:[{status:'O',content:'새 기출 항목'}]});markDirty();rerenderPreserveView();});
     document.querySelectorAll('[data-del-qsection]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQsection).qbank.splice(+b.dataset.qIndex,1);markDirty();rerenderPreserveView();});
-    document.querySelectorAll('[data-add-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQitem).qbank[+b.dataset.qIndex].items.push({status:'O',content:'새 기출 항목'});markDirty();rerenderPreserveView();});
+    document.querySelectorAll('[data-add-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQitem).qbank[+b.dataset.qIndex].items.push({status:'-',content:'새 참고 항목'});markDirty();rerenderPreserveView();});
     document.querySelectorAll('[data-del-qitem]').forEach(b=>b.onclick=()=>{findCard(b.dataset.delQitem).qbank[+b.dataset.qIndex].items.splice(+b.dataset.itemIndex,1);markDirty();rerenderPreserveView();});
-    document.querySelectorAll('[data-toggle-ox]').forEach(b=>b.onclick=()=>{const x=findCard(b.dataset.toggleOx).qbank[+b.dataset.qIndex].items[+b.dataset.itemIndex];x.status=x.status==='X'?'O':'X';markDirty();rerenderPreserveView();});
-    document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{findCard(el.dataset.qItem).qbank[+el.dataset.qIndex].items[+el.dataset.itemIndex].content=sanitizeRich(el.innerHTML);markDirty();});
-    initCategoryDrag();
+    document.querySelectorAll('[data-q-status]').forEach(sel=>sel.onchange=()=>{const it=findCard(sel.dataset.qStatus)?.qbank?.[+sel.dataset.qIndex]?.items?.[+sel.dataset.itemIndex];if(it)it.status=['O','X','-'].includes(sel.value)?sel.value:'-';markDirty();});
+    document.querySelectorAll('[data-q-date]').forEach(el=>el.oninput=()=>{const q=findCard(el.dataset.qDate)?.qbank?.[+el.dataset.qIndex];if(q)q.date=sanitizeRich(el.innerHTML);markDirty();});
+    document.querySelectorAll('[data-q-title]').forEach(el=>el.oninput=()=>{const q=findCard(el.dataset.qTitle)?.qbank?.[+el.dataset.qIndex];if(q)q.title=sanitizeRich(el.innerHTML);markDirty();});
+    document.querySelectorAll('[data-q-item]').forEach(el=>el.oninput=()=>{const it=findCard(el.dataset.qItem)?.qbank?.[+el.dataset.qIndex]?.items?.[+el.dataset.itemIndex];if(it)it.content=sanitizeRich(el.innerHTML);markDirty();});
     document.querySelectorAll('[data-add-qa]').forEach(b=>b.onclick=()=>{findCard(b.dataset.addQa).qbank.push({type:'qa',date:'기출',title:'Q&A',question:'질문 입력',answer:'정답 입력',items:[]});markDirty();rerenderPreserveView();});
-    document.querySelectorAll('[data-qa-q]').forEach(x=>x.oninput=()=>{findCard(x.dataset.qaQ).qbank[+x.dataset.qIndex].question=sanitizeRich(x.innerHTML);markDirty();});
-    document.querySelectorAll('[data-qa-a]').forEach(x=>x.oninput=()=>{findCard(x.dataset.qaA).qbank[+x.dataset.qIndex].answer=sanitizeRich(x.innerHTML);markDirty();});
-    document.querySelectorAll('[data-qa-show]').forEach(b=>b.onclick=()=>{const q=findCard(b.dataset.qaShow).qbank[+b.dataset.qIndex],m=document.querySelector(`[data-qa-mask="${b.dataset.qaShow}-${b.dataset.qIndex}"]`);if(b.dataset.open==='1'){m.className='qa-mask';m.textContent='정답';b.textContent='정답 확인';b.dataset.open='0';}else{m.className='';m.innerHTML=sanitizeRich(q.answer);b.textContent='정답 숨기기';b.dataset.open='1';}});
+    document.querySelectorAll('[data-qa-q]').forEach(el=>el.oninput=()=>{const q=findCard(el.dataset.qaQ)?.qbank?.[+el.dataset.qIndex];if(q)q.question=sanitizeRich(el.innerHTML);markDirty();});
+    document.querySelectorAll('[data-qa-a]').forEach(el=>el.oninput=()=>{const q=findCard(el.dataset.qaA)?.qbank?.[+el.dataset.qIndex];if(q)q.answer=sanitizeRich(el.innerHTML);markDirty();});
+    document.querySelectorAll('[data-qa-show]').forEach(b=>b.onclick=()=>{const q=findCard(b.dataset.qaShow)?.qbank?.[+b.dataset.qIndex],m=document.querySelector(`[data-qa-mask="${b.dataset.qaShow}-${b.dataset.qIndex}"]`);if(!q||!m)return;if(b.dataset.open==='1'){m.className='qa-mask';m.textContent='▒▒▒▒▒▒▒▒';b.textContent='정답 확인';b.dataset.open='0';}else{m.className='';m.innerHTML=sanitizeRich(q.answer);b.textContent='정답 숨기기';b.dataset.open='1';}});
         initQSectionDrag();
     initCardDrag();
     initDragHandles();
@@ -960,43 +951,7 @@ function openCategoryModal(id=null){
   $('#categoryModal').classList.add('open');
 }
 
-function saveCategory(){
-  const name = $('#categoryName').value.trim();
-  const subtitle = $('#categorySubtitle').value.trim();
-  if (!name) {
-    alert('카테고리 이름을 입력하세요.');
-    return;
-  }
-
-  if (categoryEditId) {
-    const cat = catById(categoryEditId);
-    cat.subLabel = name;
-    cat.title = name;
-    cat.subtitle = subtitle;
-  } else {
-    let idBase = slugify(name);
-    let id = `custom-${idBase}`;
-    while (catById(id)) id = `custom-${idBase}-${Date.now()}`;
-
-    state.categories.push({
-      id,
-      main:'Custom',
-      mainLabel:'Custom',
-      sub:id,
-      subLabel:name,
-      title:name,
-      subtitle,
-      order:state.categories.length,
-      cards:[]
-    });
-    selectedCategory = id;
-  }
-
-  $('#categoryModal').classList.remove('open');
-  categoryEditId = null;
-  markDirty();
-  render();
-}
+function saveCategory(){const name=$('#categoryName').value.trim(),subtitle=$('#categorySubtitle').value.trim();if(!name)return alert('카테고리 이름을 입력하세요.');if(categoryEditId){const cat=catById(categoryEditId);if(!cat)return alert('수정할 카테고리를 찾을 수 없습니다.');cat.subLabel=name;cat.title=name;cat.subtitle=subtitle;selectedCategory=cat.id;}else{const base=slugify(name)||'section';let id=`custom-${base}`,seq=2;while(catById(id))id=`custom-${base}-${seq++}`;const cat={id,main:'Custom',mainLabel:'Custom',sub:id,subLabel:name,title:name,subtitle,order:state.categories.length,cards:[]};state.categories.push(cat);selectedCategory=cat.id;}$('#categoryModal').classList.remove('open');categoryEditId=null;markDirty();render();}
 
 function deleteCategory(id){
   const cat = catById(id);
@@ -1435,10 +1390,12 @@ function onDragCancel(e){
 
 
 function autoBoldAbbreviations(raw){
- return String(raw??'').replace(/(^|[\s>])(Sx|Tx|Cz|Cx):(?=\s|&nbsp;|<|$)/gi,(m,p,x)=>`${p}<b>${x}:</b>`);
+ const labels='Sx|Tx|Cz|Cx|Nx|Dx|Rx|Px|Hx|Lt|Rt';
+ const re=new RegExp(`(^|[\\s>•*-])(${labels}):(?=\\s|&nbsp;|<|$)`,'gi');
+ return String(raw??'').replace(re,(m,p,x)=>`${p}<b>${x}:</b>`);
 }
 let lastRichRange=null;
-function isRichEditable(el){return !!el?.closest?.('.editable[contenteditable="true"],[data-q-item][contenteditable="true"],[data-q-title][contenteditable="true"]');}
+function isRichEditable(el){return !!el?.closest?.('.editable[contenteditable="true"],[data-q-item][contenteditable="true"],[data-q-title][contenteditable="true"],[data-q-date][contenteditable="true"],[data-qa-q][contenteditable="true"],[data-qa-a][contenteditable="true"]');}
 function rememberRichSelection(){if(!editing)return;const s=window.getSelection();if(!s||!s.rangeCount)return;const n=s.anchorNode,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e))lastRichRange=s.getRangeAt(0).cloneRange();}
 function showRichToolbar(){if(editing)$('#richToolbar').hidden=false;}
 function hideRichToolbar(){$('#richToolbar').hidden=true;}
@@ -1680,118 +1637,11 @@ function normalizeQuizStatement(s){
   return String(s||'').replace(/^[⭕✅]\s*/,'').replace(/^[⛔❎❌]\s*/,'').trim();
 }
 
-function qFacts(){
-  const scope=$('#quizScope').value;
-  const active=quizActiveCategory();
-  let cats=[];
-
-  if(active && isQuizExcludedCategory(active)){
-    cats=[active];
-  }else if(scope==='all'){
-    cats=quizAllowedCategories();
-  }else{
-    cats=active && !isQuizExcludedCategory(active) ? [active] : quizAllowedCategories();
-  }
-
-  const out=[];
-  cats.forEach(c=>{
-    (c.cards||[]).forEach(card=>{
-      const base={card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id};
-
-      (card.blocks||[]).filter(b=>b.type==='text').forEach(b=>{
-        splitStudyStatements(b.content).forEach(t=>{
-          if(t.length>3)out.push({...base,t});
-        });
-      });
-
-      (card.vocab||[]).forEach(v=>{
-        const t=qPlain(v);
-        if(t.length>3)out.push({...base,t});
-      });
-
-      (card.qbank||[]).forEach(q=>{
-        if(q.type==='qa'&&q.question&&q.answer){
-          out.push({...base,t:qPlain(q.answer),q:qPlain(q.question)});
-        }
-      });
-    });
-  });
-  return out;
-}
+function qFacts(){const scope=$('#quizScope').value,active=quizActiveCategory();let cats=[];if(active&&isQuizExcludedCategory(active))cats=[active];else if(scope==='all')cats=quizAllowedCategories();else cats=active&&!isQuizExcludedCategory(active)?[active]:quizAllowedCategories();const out=[];cats.forEach(c=>(c.cards||[]).forEach(card=>{const base={card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id};(card.blocks||[]).filter(b=>b.type==='text').forEach(b=>splitStudyStatements(b.content).forEach(t=>{if(t.length<=3)return;const raw=String(t).trim();let truth=null;if(/^[⛔❎❌]/.test(raw))truth='X';else if(/^[⭕✅]/.test(raw))truth='O';out.push({...base,t,truth,sourceType:'note'});}));(card.vocab||[]).forEach(v=>{const t=qPlain(v);if(t.length>3)out.push({...base,t,truth:null,sourceType:'vocab'});});(card.qbank||[]).forEach(q=>{if(q.type==='qa'&&q.question&&q.answer){out.push({...base,t:qPlain(q.answer),q:qPlain(q.question),truth:null,sourceType:'qa'});return;}(q.items||[]).forEach(item=>{const st=String(item.status||'').toUpperCase();if(!['O','X'].includes(st))return;const t=qPlain(item.content);if(t.length>2)out.push({...base,t,truth:st,sourceType:'qbank'});});});}));return out;}
 function qShuffle(x){return [...x].sort(()=>Math.random()-.5)}
-function makeQuiz(){
-  const facts=qFacts();
-  const allowedCats=quizAllowedCategories();
-  const all=allowedCats.flatMap(c=>
-    (c.cards||[]).flatMap(card=>
-      (card.blocks||[]).filter(b=>b.type==='text').flatMap(b=>
-        splitStudyStatements(b.content).map(t=>({
-          t,card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id
-        }))
-      )
-    )
-  ).filter(x=>x.t.length>3);
-
-  const n=Math.min(+$ ('#quizCount').value,facts.length*2||0);
-  const typ=$('#quizType').value;
-  const res=[];
-
-  for(let i=0;i<n;i++){
-    const x=facts[Math.floor(Math.random()*facts.length)];
-    if(!x)break;
-    const kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):typ;
-
-    if(x.q){
-      const correct=normalizeQuizStatement(x.t);
-      const wrong=qShuffle(all.filter(y=>normalizeQuizStatement(y.t)!==correct))
-        .slice(0,3).map(y=>normalizeQuizStatement(y.t));
-      if(wrong.length===3){
-        res.push({kind:'mcq',instruction:'다음 문제의 정답을 선택하세요.',statement:x.q,a:correct,opts:qShuffle([correct,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-      }
-      continue;
-    }
-
-    if(kind==='ox'){
-      const raw=String(x.t||'').trim();
-
-      if(/^[⛔❎❌]/.test(raw)){
-        res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:normalizeQuizStatement(raw),a:'X',opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-        continue;
-      }
-      if(/^[⭕✅]/.test(raw)){
-        res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:normalizeQuizStatement(raw),a:'O',opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-        continue;
-      }
-
-      const normalized=normalizeQuizStatement(raw);
-      const match=normalized.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
-      let statement=normalized,answer='O';
-
-      if(match && Math.random()<.45){
-        const sameLabel=all.filter(y=>{
-          const yy=normalizeQuizStatement(y.t);
-          const mm=yy.match(/^(Sx|Tx|Cz|Cx):\s*(.+)$/i);
-          return mm&&mm[1].toLowerCase()===match[1].toLowerCase()&&yy!==normalized;
-        });
-        const other=qShuffle(sameLabel)[0];
-        if(other){
-          statement=`${match[1]}: ${normalizeQuizStatement(other.t).replace(/^(Sx|Tx|Cz|Cx):\s*/i,'')}`;
-          answer='X';
-        }
-      }
-
-      res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement,a:answer,opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-    }else{
-      const correct=normalizeQuizStatement(x.t);
-      const wrong=qShuffle(all.filter(y=>normalizeQuizStatement(y.t)!==correct))
-        .slice(0,3).map(y=>normalizeQuizStatement(y.t));
-      if(wrong.length===3){
-        res.push({kind:'mcq',instruction:'다음 중 맞는 내용을 선택하세요.',statement:`"${x.card}"의 학습 내용으로 맞는 것은?`,a:correct,opts:qShuffle([correct,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});
-      }
-    }
-  }
-  return res;
-}
+function makeOxCandidatePools(facts,all){const oPool=[],xPool=[];facts.forEach(x=>{if(x.q)return;const raw=String(x.t||'').trim(),normalized=normalizeQuizStatement(raw);if(!normalized)return;if(x.truth==='O'){oPool.push({...x,statement:normalized,a:'O'});return;}if(x.truth==='X'){xPool.push({...x,statement:normalized,a:'X'});return;}oPool.push({...x,statement:normalized,a:'O'});const match=normalized.match(/^(Sx|Tx|Cz|Cx|Nx|Dx|Rx|Px|Hx):\s*(.+)$/i);if(!match)return;const same=all.filter(y=>{const yy=normalizeQuizStatement(y.t),mm=yy.match(/^(Sx|Tx|Cz|Cx|Nx|Dx|Rx|Px|Hx):\s*(.+)$/i);return mm&&mm[1].toLowerCase()===match[1].toLowerCase()&&yy!==normalized;});const other=qShuffle(same)[0];if(other){const value=normalizeQuizStatement(other.t).replace(/^(Sx|Tx|Cz|Cx|Nx|Dx|Rx|Px|Hx):\s*/i,'');xPool.push({...x,statement:`${match[1]}: ${value}`,a:'X',synthetic:true});}});return{oPool:qShuffle(oPool),xPool:qShuffle(xPool)};}
+function takeBalancedOxQuestions(facts,all,count){const {oPool,xPool}=makeOxCandidatePools(facts,all),targetO=Math.ceil(count/2),targetX=Math.floor(count/2),picked=[...oPool.slice(0,targetO),...xPool.slice(0,targetX)];if(picked.length<count){const used=new Set(picked.map(x=>`${x.categoryId}|${x.cardId}|${x.statement}|${x.a}`)),fallback=qShuffle([...oPool,...xPool]).filter(x=>!used.has(`${x.categoryId}|${x.cardId}|${x.statement}|${x.a}`));picked.push(...fallback.slice(0,count-picked.length));}return qShuffle(picked).slice(0,count);}
+function makeQuiz(){const facts=qFacts(),allowedCats=quizAllowedCategories(),all=allowedCats.flatMap(c=>(c.cards||[]).flatMap(card=>(card.blocks||[]).filter(b=>b.type==='text').flatMap(b=>splitStudyStatements(b.content).map(t=>({t,card:qPlain(card.title),cat:quizCategoryName(c),categoryId:c.id,cardId:card.id}))))).filter(x=>x.t.length>3),requested=+$('#quizCount').value,typ=$('#quizType').value,res=[];if(typ==='ox'){takeBalancedOxQuestions(facts,all,requested).forEach(x=>res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:x.statement,a:x.a,opts:['O','X'],src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId}));return res;}const n=Math.min(requested,facts.length*2||0);for(let i=0;i<n;i++){const x=facts[Math.floor(Math.random()*facts.length)];if(!x)break;const kind=typ==='mixed'?(Math.random()<.5?'ox':'mcq'):'mcq';if(kind==='ox'&&!x.q){const single=takeBalancedOxQuestions(facts,all,1)[0];if(single)res.push({kind:'ox',instruction:'다음 학습 내용이 맞으면 O, 틀리면 X를 선택하세요.',statement:single.statement,a:single.a,opts:['O','X'],src:`${single.cat} > ${single.card}`,categoryId:single.categoryId,cardId:single.cardId});continue;}const correct=normalizeQuizStatement(x.t),wrong=qShuffle(all.filter(y=>normalizeQuizStatement(y.t)!==correct)).slice(0,3).map(y=>normalizeQuizStatement(y.t));if(wrong.length===3)res.push({kind:'mcq',instruction:x.q?'다음 문제의 정답을 선택하세요.':'다음 중 맞는 내용을 선택하세요.',statement:x.q||`"${x.card}"의 학습 내용으로 맞는 것은?`,a:correct,opts:qShuffle([correct,...wrong]),src:`${x.cat} > ${x.card}`,categoryId:x.categoryId,cardId:x.cardId});}return res.slice(0,requested);}
 function jumpToQuizSource(q){
  $('#quizModal').classList.remove('open');
  if(!q.categoryId||!q.cardId)return;
@@ -2117,7 +1967,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.5.6 intentionally does NOT auto-save on background/visibility changes.
+  // v0.6.0 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

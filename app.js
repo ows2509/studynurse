@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.7.1';
+const APP_VERSION = '0.7.2';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -196,6 +196,24 @@ function migrateState(input){
 
   if(!Array.isArray(data.mainCategoryOrder))data.mainCategoryOrder=[];
   if(!data.mainCategoryCollapsed||typeof data.mainCategoryCollapsed!=='object')data.mainCategoryCollapsed={};
+
+  const legacyAdultIds=new Set([
+    'custom-reproductive','custom-musculo','custom-immune','custom-gastro',
+    'custom-respiratory','custom-neurology','custom-integumentary',
+    'custom-visaul','custom-visual','custom-hemato','custom-test'
+  ]);
+  (data.categories||[]).forEach(cat=>{
+    if(legacyAdultIds.has(String(cat.id||'')) &&
+       String(cat.mainLabel||cat.main||'').trim()==='Custom'){
+      cat.main='Adult';
+      cat.mainLabel='Adult';
+    }
+  });
+  if(!(data.categories||[]).some(c=>String(c.mainLabel||c.main||'').trim()==='Custom')){
+    data.mainCategoryOrder=(data.mainCategoryOrder||[]).filter(n=>n!=='Custom');
+    if(data.mainCategoryCollapsed)delete data.mainCategoryCollapsed.Custom;
+  }
+
   data.version = APP_VERSION;
   return data;
 }
@@ -757,8 +775,54 @@ function moveSubCategory(id,targetMain,targetId=null,before=true){const c=catByI
 function toggleMainCollapsed(n){state.mainCategoryCollapsed=state.mainCategoryCollapsed||{};state.mainCategoryCollapsed[n]=!state.mainCategoryCollapsed[n];render();}
 function openCategorySidebar(){$('#categorySidebar')?.classList.add('open');$('#sidebarBackdrop')?.classList.add('open');}
 function closeCategorySidebar(){$('#categorySidebar')?.classList.remove('open');$('#sidebarBackdrop')?.classList.remove('open');}
-function renderCategoryTree(){const root=$('#categoryTree');if(!root)return;root.innerHTML=mainCategoryNames().map(m=>{const closed=!!state.mainCategoryCollapsed?.[m],subs=categoriesForMain(m);return `<div class="category-tree-main" data-tree-main="${esc(m)}"><div class="category-tree-main-row">${editing?`<button class="tree-drag" draggable="true" data-main-drag="${esc(m)}">⋮⋮</button>`:''}<button class="tree-toggle" data-main-toggle="${esc(m)}">${closed?'▸':'▾'}</button><span class="category-tree-main-name" data-main-select="${esc(m)}">${esc(m)}</span></div><div class="tree-sub-list" ${closed?'hidden':''}>${subs.map(c=>`<div class="tree-sub-row ${c.id===selectedCategory?'active':''}" data-tree-sub="${esc(c.id)}" data-parent-main="${esc(m)}">${editing?`<button class="tree-sub-drag" draggable="true" data-sub-drag="${esc(c.id)}">⋮⋮</button>`:''}<span class="tree-sub-name" data-sub-select="${esc(c.id)}">${esc(c.subLabel||c.title)}</span></div>`).join('')}${editing?`<button class="tree-add-sub" data-add-sub-main="${esc(m)}">＋ 소카테고리</button>`:''}</div></div>`;}).join('')+(editing?'<button class="tree-add-main" id="treeAddMainBtn">＋ 대카테고리</button>':'');root.querySelectorAll('[data-main-toggle]').forEach(b=>b.onclick=()=>toggleMainCollapsed(b.dataset.mainToggle));root.querySelectorAll('[data-main-select]').forEach(b=>b.onclick=()=>{selectedMainCategory=b.dataset.mainSelect;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-sub-select]').forEach(b=>b.onclick=()=>{const c=catById(b.dataset.subSelect);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-add-sub-main]').forEach(b=>b.onclick=()=>openCategoryModal(null,b.dataset.addSubMain));if($('#treeAddMainBtn'))$('#treeAddMainBtn').onclick=()=>openMainCategoryModal();initTreeDnD();}
+function renderCategoryTree(){const root=$('#categoryTree');if(!root)return;root.innerHTML=mainCategoryNames().map(m=>{const closed=!!state.mainCategoryCollapsed?.[m],subs=categoriesForMain(m);return `<div class="category-tree-main" data-tree-main="${esc(m)}"><div class="category-tree-main-row">${editing?`<button class="tree-drag" draggable="true" data-main-drag="${esc(m)}">⋮⋮</button>`:''}<button class="tree-toggle" data-main-toggle="${esc(m)}">${closed?'▸':'▾'}</button><span class="category-tree-main-name" data-main-select="${esc(m)}">${esc(m)}</span></div><div class="tree-sub-list" ${closed?'hidden':''}>${subs.map(c=>`<div class="tree-sub-row ${c.id===selectedCategory?'active':''}" data-tree-sub="${esc(c.id)}" data-parent-main="${esc(m)}">${editing?`<button class="tree-sub-drag" draggable="true" data-sub-drag="${esc(c.id)}">⋮⋮</button>`:''}<span class="tree-sub-name" data-sub-select="${esc(c.id)}">${esc(c.subLabel||c.title)}</span></div>`).join('')}${editing?`<button class="tree-add-sub" data-add-sub-main="${esc(m)}">＋ 소카테고리</button>`:''}</div></div>`;}).join('')+(editing?'<button class="tree-add-main" id="treeAddMainBtn">＋ 대카테고리</button>':'');root.querySelectorAll('[data-main-toggle]').forEach(b=>b.onclick=()=>toggleMainCollapsed(b.dataset.mainToggle));root.querySelectorAll('[data-main-select]').forEach(b=>b.onclick=()=>{selectedMainCategory=b.dataset.mainSelect;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-sub-select]').forEach(b=>b.onclick=()=>{const c=catById(b.dataset.subSelect);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-add-sub-main]').forEach(b=>b.onclick=()=>openCategoryModal(null,b.dataset.addSubMain));if($('#treeAddMainBtn'))$('#treeAddMainBtn').onclick=()=>openMainCategoryModal();initTreeDnD();enableTreePointerDnD();}
 function initTreeDnD(){if(!editing)return;let drag=null;document.querySelectorAll('[data-main-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'main',name:el.dataset.mainDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-sub-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'sub',id:el.dataset.subDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-tree-main]').forEach(box=>{box.ondragover=e=>{if(!drag)return;e.preventDefault();box.classList.add('drag-over');};box.ondragleave=()=>box.classList.remove('drag-over');box.ondrop=e=>{e.preventDefault();box.classList.remove('drag-over');if(!drag)return;const t=box.dataset.treeMain;if(drag.type==='main'){const r=box.getBoundingClientRect();moveMainCategory(drag.name,t,e.clientY<r.top+r.height/2);}else moveSubCategory(drag.id,t);drag=null;};});document.querySelectorAll('[data-tree-sub]').forEach(row=>{row.ondragover=e=>{if(!drag||drag.type!=='sub')return;e.preventDefault();e.stopPropagation();row.classList.add('drag-over');};row.ondragleave=()=>row.classList.remove('drag-over');row.ondrop=e=>{e.preventDefault();e.stopPropagation();row.classList.remove('drag-over');if(!drag||drag.type!=='sub')return;const r=row.getBoundingClientRect();moveSubCategory(drag.id,row.dataset.parentMain,row.dataset.treeSub,e.clientY<r.top+r.height/2);drag=null;};});}
+
+
+function enableTreePointerDnD(){
+  if(!editing)return;
+  let drag=null,ghost=null;
+  const move=e=>{
+    if(!drag||!ghost)return;
+    ghost.style.left=(e.clientX+12)+'px';
+    ghost.style.top=(e.clientY+12)+'px';
+  };
+  const start=(e,type,value)=>{
+    if(e.pointerType==='mouse')return;
+    e.preventDefault();
+    drag={type,value};
+    ghost=document.createElement('div');
+    const c=type==='sub'?catById(value):null;
+    ghost.textContent=type==='main'?value:(c?.subLabel||c?.title||value);
+    ghost.style.cssText='position:fixed;z-index:11000;pointer-events:none;padding:7px 10px;border:1px solid #f472b6;border-radius:9px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.18);font-weight:900;';
+    document.body.appendChild(ghost);
+    move(e);
+  };
+  const end=e=>{
+    if(!drag)return;
+    const hit=document.elementFromPoint(e.clientX,e.clientY);
+    const sub=hit?.closest?.('[data-tree-sub]');
+    const main=hit?.closest?.('[data-tree-main]');
+    if(drag.type==='sub'&&sub){
+      const r=sub.getBoundingClientRect();
+      moveSubCategory(drag.value,sub.dataset.parentMain,sub.dataset.treeSub,e.clientY<r.top+r.height/2);
+    }else if(drag.type==='sub'&&main){
+      moveSubCategory(drag.value,main.dataset.treeMain);
+    }else if(drag.type==='main'&&main){
+      const r=main.getBoundingClientRect();
+      moveMainCategory(drag.value,main.dataset.treeMain,e.clientY<r.top+r.height/2);
+    }
+    ghost?.remove();ghost=null;drag=null;
+  };
+  document.querySelectorAll('[data-main-drag]').forEach(el=>{
+    el.onpointerdown=e=>start(e,'main',el.dataset.mainDrag);
+    el.onpointermove=move;el.onpointerup=end;el.onpointercancel=end;
+  });
+  document.querySelectorAll('[data-sub-drag]').forEach(el=>{
+    el.onpointerdown=e=>start(e,'sub',el.dataset.subDrag);
+    el.onpointermove=move;el.onpointerup=end;el.onpointercancel=end;
+  });
+}
 
 function render(){
  const q=$('#searchInput').value.trim().toLowerCase(),main=ensureSelectedMain(),mains=mainCategoryNames(),subs=categoriesForMain(main);
@@ -2239,7 +2303,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.7.1 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.2 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

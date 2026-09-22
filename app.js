@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.6.2';
+const APP_VERSION = '0.7.0';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -14,6 +14,8 @@ let editSnapshot = null;
 let sb = null;
 let htmlTargetCardId = null;
 let categoryEditId = null;
+let mainCategoryEditName = null;
+let selectedMainCategory = null;
 let imageTargetCardId = null;
 let pendingImageFile = null;
 let pendingImageBlob = null;
@@ -122,6 +124,8 @@ function migrateState(input){
     if (!cat.subLabel && cat.sub) cat.subLabel = cat.sub;
     if (!cat.title && cat.sub) cat.title = cat.sub;
     if (!cat.mainLabel && cat.main) cat.mainLabel = cat.main;
+    if (!cat.mainLabel) cat.mainLabel = 'Adult';
+    if (!cat.main) cat.main = cat.mainLabel;
     if (!cat.id) cat.id = `category-${ci+1}-${slugify(cat.subLabel || cat.title || '')}`;
     if (!Array.isArray(cat.cards)) cat.cards = [];
     if (cat.order == null) cat.order = ci;
@@ -740,42 +744,25 @@ function currentCardIdFromToggle(btn){
     card?.querySelector('[data-del-card]')?.dataset?.delCard || null;
 }
 
+function mainCategoryName(cat){return String(cat?.mainLabel||cat?.main||'Adult').trim()||'Adult';}
+function mainCategoryNames(){const seen=new Set(),out=[];(state.categories||[]).forEach(c=>{const n=mainCategoryName(c);if(!seen.has(n)){seen.add(n);out.push(n);}});return out;}
+function categoriesForMain(n){return (state.categories||[]).filter(c=>mainCategoryName(c)===n).sort((a,b)=>(a.order??0)-(b.order??0));}
+function ensureSelectedMain(){const c=catById(selectedCategory);if(c)selectedMainCategory=mainCategoryName(c);const ns=mainCategoryNames();if(!selectedMainCategory||!ns.includes(selectedMainCategory))selectedMainCategory=ns[0]||'Adult';return selectedMainCategory;}
+
 function render(){
-  const q = $('#searchInput').value.trim().toLowerCase();
-
-  $('#tabs').innerHTML =
-    state.categories.map(c=>`
-      <button class="tab ${c.id===selectedCategory?'active':''}" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span>${esc(c.subLabel||c.title)}</span></button>`).join('') +
-    (editing ? `<button class="tab tab-add" id="addCategoryBtn" title="카테고리 추가">＋</button>` : '');
-
-  $('#tabs').querySelectorAll('.tab[data-cat]').forEach(b=>{
-    b.onclick=e=>{if(e.target.closest('[data-cat-drag]'))return;collectEditable();const id=b.dataset.cat;if(!catById(id))return;selectedCategory=id;render();};
-  });
-
-  if ($('#addCategoryBtn')) $('#addCategoryBtn').onclick = () => openCategoryModal();
-
-  const cat = catById(selectedCategory) || state.categories[0];
-  if (!cat) {
-    $('#content').innerHTML = '<div class="empty">데이터가 없습니다.</div>';
-    return;
-  }
-
-  let cards = cat.cards || [];
-  if (q) cards = cards.filter(c => searchCard(c,q));
-
-  $('#content').innerHTML = `
-    <div class="section-head">
-      <h2 class="section-title">${esc(cat.title || cat.subLabel || '')}</h2>
-      <div class="section-subtitle">${esc(cat.subtitle || '')}</div>
-      ${editing && dirty ? `<div class="unsaved-warning">저장되지 않은 변경사항이 있습니다.</div>` : ''}
-      <div class="category-tools">
-        <button class="btn btn-soft" id="renameCategoryBtn">카테고리 수정</button>
-        <button class="btn btn-danger" id="deleteCategoryBtn">카테고리 삭제</button>
-      </div>
-    </div>
-    <div class="cards">${cards.length ? cards.map(renderCard).join('') : '<div class="empty">검색 결과가 없습니다.</div>'}</div>`;
-
-  bindDynamic();
+ const q=$('#searchInput').value.trim().toLowerCase(),main=ensureSelectedMain(),mains=mainCategoryNames(),subs=categoriesForMain(main);
+ $('#tabs').innerHTML=`<div class="main-category-bar">${mains.map(n=>`<button class="main-tab ${n===main?'active':''}" type="button" data-main-category="${esc(n)}">${esc(n)}</button>`).join('')}${editing?`<button class="main-tab main-tab-add" id="addMainCategoryBtn">＋ 대</button><span class="main-category-tools"><button class="btn btn-soft" id="renameMainCategoryBtn">대 수정</button><button class="btn btn-danger" id="deleteMainCategoryBtn">대 삭제</button></span>`:''}</div><div class="sub-category-row"><span class="sub-category-label">${esc(main)} &gt;</span>${subs.map(c=>`<button class="tab ${c.id===selectedCategory?'active':''}" type="button" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span>${esc(c.subLabel||c.title)}</span></button>`).join('')}${editing?`<button class="tab tab-add" id="addCategoryBtn">＋ 소</button>`:''}</div>`;
+ $('#tabs').querySelectorAll('[data-main-category]').forEach(b=>b.onclick=()=>{collectEditable();selectedMainCategory=b.dataset.mainCategory;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();});
+ $('#tabs').querySelectorAll('[data-cat]').forEach(b=>b.onclick=e=>{if(e.target.closest('[data-cat-drag]'))return;collectEditable();const c=catById(b.dataset.cat);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();});
+ if($('#addMainCategoryBtn'))$('#addMainCategoryBtn').onclick=()=>openMainCategoryModal();
+ if($('#renameMainCategoryBtn'))$('#renameMainCategoryBtn').onclick=()=>openMainCategoryModal(main);
+ if($('#deleteMainCategoryBtn'))$('#deleteMainCategoryBtn').onclick=()=>deleteMainCategory(main);
+ if($('#addCategoryBtn'))$('#addCategoryBtn').onclick=()=>openCategoryModal(null,main);
+ let cat=catById(selectedCategory);if(!cat||mainCategoryName(cat)!==main){cat=subs[0]||null;selectedCategory=cat?.id||null;}
+ if(!cat){$('#content').innerHTML=`<div class="empty">${esc(main)} 안에 소카테고리가 없습니다.</div>`;return;}
+ let cards=cat.cards||[];if(q)cards=cards.filter(c=>searchCard(c,q));
+ $('#content').innerHTML=`<div class="section-head"><h2 class="section-title">${esc(cat.title||cat.subLabel||'')}</h2><div class="section-subtitle">${esc(main)} &gt; ${esc(cat.subLabel||cat.title||'')}${cat.subtitle?` · ${esc(cat.subtitle)}`:''}</div>${editing&&dirty?`<div class="unsaved-warning">저장되지 않은 변경사항이 있습니다.</div>`:''}<div class="category-tools"><button class="btn btn-soft" id="renameCategoryBtn">소카테고리 수정</button><button class="btn btn-danger" id="deleteCategoryBtn">소카테고리 삭제</button></div></div><div class="cards">${cards.length?cards.map(renderCard).join(''):'<div class="empty">검색 결과가 없습니다.</div>'}</div>`;
+ bindDynamic();
 }
 
 function bindDynamic(){
@@ -1052,17 +1039,35 @@ function createCard(){
   render();
 }
 
-function openCategoryModal(id=null){
-  categoryEditId = id;
-  const cat = id ? catById(id) : null;
-  $('#categoryModalTitle').textContent = cat ? '카테고리 수정' : '새 카테고리';
-  $('#categoryName').value = cat ? (cat.subLabel || cat.title || '') : '';
-  $('#categorySubtitle').value = cat ? (cat.subtitle || '') : '';
-  $('#saveCategoryBtn').textContent = cat ? '수정' : '추가';
-  $('#categoryModal').classList.add('open');
+function openCategoryModal(id=null,mainName=null){
+ categoryEditId=id;const c=id?catById(id):null,sel=c?mainCategoryName(c):(mainName||ensureSelectedMain());
+ $('#categoryModalTitle').textContent=c?'소카테고리 수정':'새 소카테고리';
+ $('#categoryMain').innerHTML=mainCategoryNames().map(n=>`<option value="${esc(n)}" ${n===sel?'selected':''}>${esc(n)}</option>`).join('');
+ $('#categoryName').value=c?(c.subLabel||c.title||''):'';$('#categorySubtitle').value=c?(c.subtitle||''):'';
+ $('#saveCategoryBtn').textContent=c?'수정':'추가';$('#categoryModal').classList.add('open');
 }
 
-function saveCategory(){const name=$('#categoryName').value.trim(),subtitle=$('#categorySubtitle').value.trim();if(!name)return alert('카테고리 이름을 입력하세요.');if(categoryEditId){const cat=catById(categoryEditId);if(!cat)return alert('수정할 카테고리를 찾을 수 없습니다.');cat.subLabel=name;cat.title=name;cat.subtitle=subtitle;selectedCategory=cat.id;}else{const base=slugify(name)||'section';let id=`custom-${base}`,seq=2;while(catById(id))id=`custom-${base}-${seq++}`;const cat={id,main:'Custom',mainLabel:'Custom',sub:id,subLabel:name,title:name,subtitle,order:state.categories.length,cards:[]};state.categories.push(cat);selectedCategory=cat.id;}$('#categoryModal').classList.remove('open');categoryEditId=null;markDirty();render();}
+function saveCategory(){
+ const name=$('#categoryName').value.trim(),subtitle=$('#categorySubtitle').value.trim(),main=$('#categoryMain').value.trim();
+ if(!main)return alert('대카테고리를 선택하세요.');if(!name)return alert('소카테고리 이름을 입력하세요.');
+ if(categoryEditId){const c=catById(categoryEditId);if(!c)return;c.main=main;c.mainLabel=main;c.subLabel=name;c.title=name;c.subtitle=subtitle;selectedCategory=c.id;}
+ else{const base=slugify(`${main}-${name}`)||'section';let id=`custom-${base}`,n=2;while(catById(id))id=`custom-${base}-${n++}`;state.categories.push({id,main,mainLabel:main,sub:id,subLabel:name,title:name,subtitle,order:state.categories.length,cards:[]});selectedCategory=id;}
+ selectedMainCategory=main;$('#categoryModal').classList.remove('open');categoryEditId=null;markDirty();render();
+}
+
+function openMainCategoryModal(name=null){
+ mainCategoryEditName=name;$('#mainCategoryModalTitle').textContent=name?'대카테고리 수정':'새 대카테고리';$('#mainCategoryName').value=name||'';$('#saveMainCategoryBtn').textContent=name?'수정':'추가';$('#mainCategoryModal').classList.add('open');
+}
+function saveMainCategory(){
+ const name=$('#mainCategoryName').value.trim();if(!name)return alert('대카테고리 이름을 입력하세요.');const names=mainCategoryNames();
+ if(mainCategoryEditName){if(name!==mainCategoryEditName&&names.includes(name))return alert('같은 이름의 대카테고리가 이미 있습니다.');state.categories.forEach(c=>{if(mainCategoryName(c)===mainCategoryEditName){c.main=name;c.mainLabel=name;}});}
+ else{if(names.includes(name))return alert('같은 이름의 대카테고리가 이미 있습니다.');const base=slugify(`${name}-new-section`)||'section';let id=`custom-${base}`,n=2;while(catById(id))id=`custom-${base}-${n++}`;state.categories.push({id,main:name,mainLabel:name,sub:id,subLabel:'새 소카테고리',title:'새 소카테고리',subtitle:'',order:state.categories.length,cards:[]});selectedCategory=id;}
+ selectedMainCategory=name;$('#mainCategoryModal').classList.remove('open');mainCategoryEditName=null;markDirty();render();
+}
+function deleteMainCategory(name){
+ const cs=categoriesForMain(name),cnt=cs.reduce((n,c)=>n+(c.cards?.length||0),0);if(!confirm(`"${name}" 대카테고리와 소카테고리 ${cs.length}개, 카드 ${cnt}개를 모두 삭제하시겠습니까?`))return;
+ const ids=new Set(cs.map(c=>c.id));state.categories=state.categories.filter(c=>!ids.has(c.id));selectedMainCategory=mainCategoryNames()[0]||null;selectedCategory=selectedMainCategory?categoriesForMain(selectedMainCategory)[0]?.id||null:null;markDirty();render();
+}
 
 function deleteCategory(id){
   const cat = catById(id);
@@ -2083,7 +2088,7 @@ function bindCriticalActions(){
 function bind(){
   bindCriticalActions();
   $('#searchInput').addEventListener('input', render);
-  $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff59d'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
+  $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff2a8'); $('#rtHighlightBlue').onclick=()=>applyRichCommand('hiliteColor','#cdeeff'); $('#rtHighlightGreen').onclick=()=>applyRichCommand('hiliteColor','#ddf4c7'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtGray').onclick=()=>applyRichCommand('foreColor','#737373'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
   $('#richToolbar').addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});
   document.addEventListener('selectionchange',()=>{if(!editing)return;const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(e)){rememberRichSelection();showRichToolbar();}});
   document.addEventListener('focusin',e=>{if(editing&&isRichEditable(e.target))setTimeout(updateRichToolbarContext,0);});
@@ -2104,6 +2109,8 @@ function bind(){
     categoryEditId = null;
   };
   $('#saveCategoryBtn').onclick = saveCategory;
+  $('#saveMainCategoryBtn').onclick = saveMainCategory;
+  $('#closeMainCategoryBtn').onclick = () => { $('#mainCategoryModal').classList.remove('open'); mainCategoryEditName=null; };
 
   $('#previewHtmlBtn').onclick = previewHtml;
   $('#applyHtmlBtn').onclick = applyHtml;
@@ -2217,7 +2224,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.6.2 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.0 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

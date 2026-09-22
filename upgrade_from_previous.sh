@@ -1,34 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
-R="$(cd "$(dirname "${BASH_SOURCE[0]}")"&&pwd)"
-P="$(dirname "$R")";V=""
-
-for x in \
-  "$P/StudyNurse-v0.6.1" \
-  "$P/StudyNurse-v0.6.0" \
-  "$P/StudyNurse-v0.5.6"
-do
-  if [[ -d "$x/.git" ]];then V="$x";break;fi
+ROOT="/mnt/e/google_drive/02_CODING/CODING/Studynurse"
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PREV=""
+for x in "$ROOT/StudyNurse-v0.6.2" "$ROOT/StudyNurse-v0.6.1" "$ROOT/StudyNurse-v0.6.0"; do
+  if [[ -d "$x/.git" ]]; then PREV="$x"; break; fi
 done
-
-[[ -n "$V" ]]||{ echo "[ERROR] 이전 Git 저장소 없음";exit 1;}
-
-for c in config.js config.dev.js;do
-  if [[ -f "$V/$c" ]];then
-    cp -f "$V/$c" "$R/$c"
-    sed -i 's/version:[[:space:]]*"[^"]*"/version: "0.6.2"/' "$R/$c"
+[[ -n "$PREV" ]] || { echo "[ERROR] 이전 Git 저장소를 $ROOT 아래에서 찾지 못했습니다."; exit 1; }
+for c in config.js config.dev.js; do
+  if [[ -f "$PREV/$c" ]]; then
+    cp -f "$PREV/$c" "$HERE/$c"
+    sed -i 's/version:[[:space:]]*"[^"]*"/version: "0.7.0"/' "$HERE/$c"
   fi
 done
-
-rm -rf "$R/.git"
-cp -a "$V/.git" "$R/.git"
-cd "$R"
-
+rm -rf "$HERE/.git"
+cp -a "$PREV/.git" "$HERE/.git"
+cd "$HERE"
 git fetch origin
 ./verify_version.sh
-
-echo "Supabase SQL: supabase_upgrade_0.6.2.sql"
+echo "Supabase SQL: supabase_upgrade_0.7.0.sql"
 echo "git add -A"
-echo "git commit -m 'StudyNurse v0.6.2'"
+echo "git commit -m 'StudyNurse v0.7.0'"
 echo "git rebase origin/main"
 echo "git push"

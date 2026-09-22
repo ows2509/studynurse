@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.6.2</title>
+<title>StudyNurse v0.7.0</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -14,7 +14,7 @@
 <div class="app" id="app">
   <div class="topbar">
     <div class="brandrow">
-      <div class="brand">StudyNurse <small id="appVersion">v0.6.2</small></div>
+      <div class="brand">StudyNurse <small id="appVersion">v0.7.0</small></div>
       <span class="modebadge" id="modeBadge">VIEW</span>
       <span class="envbadge" id="envBadge">PROD</span>
       <span class="spacer"></span>
@@ -35,9 +35,12 @@
       <b>서식</b>
       <button id="rtBold">B</button>
       <button id="rtUnderline"><u>U</u></button>
-      <button id="rtHighlight">형광</button>
+      <button id="rtHighlight">노랑</button>
+      <button id="rtHighlightBlue">하늘</button>
+      <button id="rtHighlightGreen">연두</button>
       <button id="rtBlack">검정</button>
       <button id="rtPink">핑크</button>
+      <button id="rtGray">회색</button>
       <button id="rtClear">초기화</button>
     </div>
   </div>
@@ -64,14 +67,16 @@
 
 <div class="modal" id="categoryModal">
  <div class="modalbox">
-  <h3 id="categoryModalTitle">새 카테고리</h3>
-  <div class="field"><label>표시 이름</label><input id="categoryName" placeholder="예: Neuro"></div>
+  <h3 id="categoryModalTitle">새 소카테고리</h3>
+  <div class="field"><label>대카테고리</label><select id="categoryMain"></select></div>
+  <div class="field"><label>소카테고리 이름</label><input id="categoryName" placeholder="예: Growth"></div>
   <div class="field"><label>설명 (선택)</label><input id="categorySubtitle" placeholder="예: Neurology"></div>
   <button class="btn btn-pink" id="saveCategoryBtn">추가</button>
   <button class="btn btn-soft" id="closeCategoryBtn">취소</button>
  </div>
 </div>
 
+<div class="modal" id="mainCategoryModal"><div class="modalbox"><h3 id="mainCategoryModalTitle">새 대카테고리</h3><div class="field"><label>대카테고리 이름</label><input id="mainCategoryName" placeholder="예: Child"></div><button class="btn btn-pink" id="saveMainCategoryBtn">추가</button><button class="btn btn-soft" id="closeMainCategoryBtn">취소</button></div></div>
 <div class="modal" id="htmlModal">
  <div class="modalbox html-modalbox">
   <h3>HTML 직접 편집</h3>

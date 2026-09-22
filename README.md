@@ -1,12 +1,16 @@
-# StudyNurse v0.7.2
+# StudyNurse v0.7.3
 
-Windows: `E:\google_drive\02_CODING\CODING\Studynurse`
-WSL: `/mnt/e/google_drive/02_CODING/CODING/Studynurse`
+Development roots:
+- Windows: `E:\google_drive\02_CODING\CODING\Studynurse`
+- WSL: `/mnt/e/google_drive/02_CODING/CODING/Studynurse`
 
-- Wide desktop: category tree uses the external left gutter and does not consume the centered note width.
-- Narrow desktop/mobile: `☰ 카테고리` drawer.
-- Parent DND, child DND, cross-parent child DND retained.
-- Touch/pointer DND fallback added.
-- Legacy repair is limited to known historical `custom-*` StudyNurse IDs currently misclassified under `Custom`.
-- Arbitrary user-created `Custom` parents are preserved.
-- Supabase SQL is non-destructive.
+## Navigation
+- PC/mobile use the same left edge drawer.
+- Folded: a persistent `>` button is visible at the left edge.
+- Expanded: the button becomes `<` and the category tree slides in.
+- Desktop remembers open/closed state in localStorage.
+- Mobile starts folded and closes automatically after a category selection.
+- The drawer overlays the page instead of permanently covering or resizing study content.
+- Existing parent/child DND and cross-parent DND are retained.
+
+v0.7.2 safe legacy category repair and all existing quiz/rich-text features are retained.

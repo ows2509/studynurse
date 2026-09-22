@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.7.2';
+const APP_VERSION = '0.7.3';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -773,9 +773,31 @@ function normalizeSubOrders(main){categoriesForMain(main).forEach((c,i)=>c.order
 function moveMainCategory(source,target,before=true){if(!source||!target||source===target)return;const arr=mainCategoryNames().filter(n=>n!==source);let i=arr.indexOf(target);if(i<0)i=arr.length;if(!before)i++;arr.splice(i,0,source);state.mainCategoryOrder=arr;markDirty();render();}
 function moveSubCategory(id,targetMain,targetId=null,before=true){const c=catById(id);if(!c)return;const old=mainCategoryName(c),list=categoriesForMain(targetMain).filter(x=>x.id!==id);let i=list.length;if(targetId){const x=list.findIndex(v=>v.id===targetId);if(x>=0)i=x+(before?0:1);}c.main=targetMain;c.mainLabel=targetMain;list.splice(i,0,c);list.forEach((v,n)=>v.order=n);if(old!==targetMain)normalizeSubOrders(old);selectedMainCategory=targetMain;selectedCategory=id;markDirty();render();}
 function toggleMainCollapsed(n){state.mainCategoryCollapsed=state.mainCategoryCollapsed||{};state.mainCategoryCollapsed[n]=!state.mainCategoryCollapsed[n];render();}
-function openCategorySidebar(){$('#categorySidebar')?.classList.add('open');$('#sidebarBackdrop')?.classList.add('open');}
-function closeCategorySidebar(){$('#categorySidebar')?.classList.remove('open');$('#sidebarBackdrop')?.classList.remove('open');}
-function renderCategoryTree(){const root=$('#categoryTree');if(!root)return;root.innerHTML=mainCategoryNames().map(m=>{const closed=!!state.mainCategoryCollapsed?.[m],subs=categoriesForMain(m);return `<div class="category-tree-main" data-tree-main="${esc(m)}"><div class="category-tree-main-row">${editing?`<button class="tree-drag" draggable="true" data-main-drag="${esc(m)}">⋮⋮</button>`:''}<button class="tree-toggle" data-main-toggle="${esc(m)}">${closed?'▸':'▾'}</button><span class="category-tree-main-name" data-main-select="${esc(m)}">${esc(m)}</span></div><div class="tree-sub-list" ${closed?'hidden':''}>${subs.map(c=>`<div class="tree-sub-row ${c.id===selectedCategory?'active':''}" data-tree-sub="${esc(c.id)}" data-parent-main="${esc(m)}">${editing?`<button class="tree-sub-drag" draggable="true" data-sub-drag="${esc(c.id)}">⋮⋮</button>`:''}<span class="tree-sub-name" data-sub-select="${esc(c.id)}">${esc(c.subLabel||c.title)}</span></div>`).join('')}${editing?`<button class="tree-add-sub" data-add-sub-main="${esc(m)}">＋ 소카테고리</button>`:''}</div></div>`;}).join('')+(editing?'<button class="tree-add-main" id="treeAddMainBtn">＋ 대카테고리</button>':'');root.querySelectorAll('[data-main-toggle]').forEach(b=>b.onclick=()=>toggleMainCollapsed(b.dataset.mainToggle));root.querySelectorAll('[data-main-select]').forEach(b=>b.onclick=()=>{selectedMainCategory=b.dataset.mainSelect;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-sub-select]').forEach(b=>b.onclick=()=>{const c=catById(b.dataset.subSelect);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-add-sub-main]').forEach(b=>b.onclick=()=>openCategoryModal(null,b.dataset.addSubMain));if($('#treeAddMainBtn'))$('#treeAddMainBtn').onclick=()=>openMainCategoryModal();initTreeDnD();enableTreePointerDnD();}
+function openCategorySidebar(){
+  $('#categorySidebar')?.classList.add('open');
+  $('#sidebarBackdrop')?.classList.add('open');
+  const btn=$('#categoryEdgeToggle');
+  if(btn){
+    btn.classList.add('open');
+    btn.textContent='<';
+    btn.setAttribute('aria-label','카테고리 접기');
+    btn.title='카테고리 접기';
+  }
+  try{localStorage.setItem('studynurse-category-drawer','open');}catch{}
+}
+function closeCategorySidebar(){
+  $('#categorySidebar')?.classList.remove('open');
+  $('#sidebarBackdrop')?.classList.remove('open');
+  const btn=$('#categoryEdgeToggle');
+  if(btn){
+    btn.classList.remove('open');
+    btn.textContent='>';
+    btn.setAttribute('aria-label','카테고리 열기');
+    btn.title='카테고리 열기';
+  }
+  try{localStorage.setItem('studynurse-category-drawer','closed');}catch{}
+}
+function renderCategoryTree(){const root=$('#categoryTree');if(!root)return;root.innerHTML=mainCategoryNames().map(m=>{const closed=!!state.mainCategoryCollapsed?.[m],subs=categoriesForMain(m);return `<div class="category-tree-main" data-tree-main="${esc(m)}"><div class="category-tree-main-row">${editing?`<button class="tree-drag" draggable="true" data-main-drag="${esc(m)}">⋮⋮</button>`:''}<button class="tree-toggle" data-main-toggle="${esc(m)}">${closed?'▸':'▾'}</button><span class="category-tree-main-name" data-main-select="${esc(m)}">${esc(m)}</span></div><div class="tree-sub-list" ${closed?'hidden':''}>${subs.map(c=>`<div class="tree-sub-row ${c.id===selectedCategory?'active':''}" data-tree-sub="${esc(c.id)}" data-parent-main="${esc(m)}">${editing?`<button class="tree-sub-drag" draggable="true" data-sub-drag="${esc(c.id)}">⋮⋮</button>`:''}<span class="tree-sub-name" data-sub-select="${esc(c.id)}">${esc(c.subLabel||c.title)}</span></div>`).join('')}${editing?`<button class="tree-add-sub" data-add-sub-main="${esc(m)}">＋ 소카테고리</button>`:''}</div></div>`;}).join('')+(editing?'<button class="tree-add-main" id="treeAddMainBtn">＋ 대카테고리</button>':'');root.querySelectorAll('[data-main-toggle]').forEach(b=>b.onclick=()=>toggleMainCollapsed(b.dataset.mainToggle));root.querySelectorAll('[data-main-select]').forEach(b=>b.onclick=()=>{selectedMainCategory=b.dataset.mainSelect;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();if(matchMedia('(max-width:600px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-sub-select]').forEach(b=>b.onclick=()=>{const c=catById(b.dataset.subSelect);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();if(matchMedia('(max-width:600px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-add-sub-main]').forEach(b=>b.onclick=()=>openCategoryModal(null,b.dataset.addSubMain));if($('#treeAddMainBtn'))$('#treeAddMainBtn').onclick=()=>openMainCategoryModal();initTreeDnD();enableTreePointerDnD();}
 function initTreeDnD(){if(!editing)return;let drag=null;document.querySelectorAll('[data-main-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'main',name:el.dataset.mainDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-sub-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'sub',id:el.dataset.subDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-tree-main]').forEach(box=>{box.ondragover=e=>{if(!drag)return;e.preventDefault();box.classList.add('drag-over');};box.ondragleave=()=>box.classList.remove('drag-over');box.ondrop=e=>{e.preventDefault();box.classList.remove('drag-over');if(!drag)return;const t=box.dataset.treeMain;if(drag.type==='main'){const r=box.getBoundingClientRect();moveMainCategory(drag.name,t,e.clientY<r.top+r.height/2);}else moveSubCategory(drag.id,t);drag=null;};});document.querySelectorAll('[data-tree-sub]').forEach(row=>{row.ondragover=e=>{if(!drag||drag.type!=='sub')return;e.preventDefault();e.stopPropagation();row.classList.add('drag-over');};row.ondragleave=()=>row.classList.remove('drag-over');row.ondrop=e=>{e.preventDefault();e.stopPropagation();row.classList.remove('drag-over');if(!drag||drag.type!=='sub')return;const r=row.getBoundingClientRect();moveSubCategory(drag.id,row.dataset.parentMain,row.dataset.treeSub,e.clientY<r.top+r.height/2);drag=null;};});}
 
 
@@ -822,6 +844,20 @@ function enableTreePointerDnD(){
     el.onpointerdown=e=>start(e,'sub',el.dataset.subDrag);
     el.onpointermove=move;el.onpointerup=end;el.onpointercancel=end;
   });
+}
+
+
+function toggleCategorySidebar(){
+  if($('#categorySidebar')?.classList.contains('open'))closeCategorySidebar();
+  else openCategorySidebar();
+}
+function restoreCategorySidebarState(){
+  let saved='closed';
+  try{saved=localStorage.getItem('studynurse-category-drawer')||'closed';}catch{}
+  // Mobile always starts folded to maximize study space.
+  if(matchMedia('(max-width:600px)').matches)closeCategorySidebar();
+  else if(saved==='open')openCategorySidebar();
+  else closeCategorySidebar();
 }
 
 function render(){
@@ -2184,9 +2220,9 @@ function bind(){
     $('#categoryModal').classList.remove('open');
     categoryEditId = null;
   };
-  $('#mobileCategoryBtn').onclick = openCategorySidebar;
-  $('#closeCategorySidebarBtn').onclick = closeCategorySidebar;
   $('#sidebarBackdrop').onclick = closeCategorySidebar;
+  $('#categoryEdgeToggle').onclick = toggleCategorySidebar;
+  restoreCategorySidebarState();
   $('#saveCategoryBtn').onclick = saveCategory;
   $('#saveMainCategoryBtn').onclick = saveMainCategory;
   $('#closeMainCategoryBtn').onclick = () => { $('#mainCategoryModal').classList.remove('open'); mainCategoryEditName=null; };
@@ -2303,7 +2339,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.7.2 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.3 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

@@ -1,17 +1,17 @@
-# StudyNurse v0.7.2 Test Report
+# StudyNurse v0.7.3 Test Report
 
 - Version consistency: PASS
 - JavaScript syntax: PASS
 - WSL shell syntax: PASS
-- Wide-desktop external sidebar contract: PASS
-- Desktop category button hidden contract: PASS
-- Narrow/mobile drawer contract: PASS
+- Persistent left-edge `>` control: PASS
+- Expanded `<` state contract: PASS
+- Unified PC/mobile drawer contract: PASS
+- Desktop drawer-state persistence: PASS
+- Mobile default-folded contract: PASS
 - Parent DND retained: PASS
 - Child/cross-parent DND retained: PASS
-- Touch/pointer DND fallback: PASS
-- Known legacy Custom -> Adult repair unit test: PASS
-- Arbitrary user-created Custom preservation unit test: PASS
-- Child parent preservation unit test: PASS
-- Quiz/minimize regression contract: PASS
-- New `/mnt/e/.../Studynurse` path: PASS
-- Supabase SQL payload rewrite: NONE
+- Touch DND retained: PASS
+- v0.7.2 safe legacy category repair retained: PASS
+- Quiz/minimize regression contract retained: PASS
+- `/mnt/e/.../Studynurse` deployment path: PASS
+- Supabase study payload rewrite: NONE

@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.7.4';
+const APP_VERSION = '0.7.5';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1630,6 +1630,54 @@ function hideRichToolbar(){$('#richToolbar').hidden=true;}
 function updateRichToolbarContext(){if(!editing){hideRichToolbar();return;}const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(document.activeElement)||isRichEditable(e)){rememberRichSelection();showRichToolbar();}else hideRichToolbar();}
 function restoreRichSelection(){if(!lastRichRange)return;const s=window.getSelection();s.removeAllRanges();s.addRange(lastRichRange);}
 
+
+let richSelectionRange=null;
+let richSelectionEditable=null;
+
+function captureRichSelection(){
+  const sel=window.getSelection();
+  if(!sel||sel.rangeCount===0)return;
+  const range=sel.getRangeAt(0);
+  let node=range.commonAncestorContainer;
+  if(node.nodeType===Node.TEXT_NODE)node=node.parentElement;
+  const editable=node?.closest?.('.editable[contenteditable="true"]');
+  if(!editable)return;
+  richSelectionRange=range.cloneRange();
+  richSelectionEditable=editable;
+  lastEditable=editable;
+  savedRange=range.cloneRange();
+}
+
+function restoreRichSelection(){
+  const range=richSelectionRange||savedRange;
+  const editable=richSelectionEditable||lastEditable;
+  if(!range||!editable||!document.contains(editable))return false;
+  editable.focus({preventScroll:true});
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range.cloneRange());
+  return true;
+}
+
+function bindRichToolbarSelectionGuard(){
+  const toolbar=$('#richToolbar');
+  if(!toolbar)return;
+  toolbar.querySelectorAll('button').forEach(btn=>{
+    // Critical: prevent the toolbar button from stealing focus and collapsing
+    // the contenteditable selection before the formatting command runs.
+    btn.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      restoreRichSelection();
+    });
+    btn.addEventListener('pointerdown',e=>{
+      if(e.pointerType!=='mouse'){
+        e.preventDefault();
+        restoreRichSelection();
+      }
+    });
+  });
+}
+
 let richToastTimer=null;
 function richCommandLabel(cmd,value){
   if(cmd==='bold')return '굵게 적용';
@@ -1672,20 +1720,28 @@ function showRichFormatFeedback(cmd,value){
 }
 
 function applyRichCommand(cmd,value=null){
-  const el=lastEditable;
+  const el=richSelectionEditable||lastEditable;
   if(!el)return;
 
-  el.focus();
-  restoreSelection();
+  if(!restoreRichSelection()){
+    el.focus({preventScroll:true});
+    restoreSelection();
+  }
 
   try{
-    if(value==null)document.execCommand(cmd,false,null);
-    else document.execCommand(cmd,false,value);
+    document.execCommand('styleWithCSS',false,true);
+    const ok=value==null
+      ? document.execCommand(cmd,false,null)
+      : document.execCommand(cmd,false,value);
+
+    if(!ok)console.warn('Rich command returned false',cmd,value);
   }catch(e){
     console.warn('Rich command failed',cmd,value,e);
     return;
   }
 
+  // Capture the post-format range while it is still valid.
+  captureRichSelection();
   saveSelection();
   normalizeEmptyEditable(el);
   markDirty();
@@ -2259,6 +2315,8 @@ function bindCriticalActions(){
 }
 
 function bind(){
+  bindRichToolbarSelectionGuard();
+
   bindCriticalActions();
   $('#searchInput').addEventListener('input', render);
   $('#rtBold').onclick=()=>applyRichCommand('bold'); $('#rtUnderline').onclick=()=>applyRichCommand('underline'); $('#rtHighlight').onclick=()=>applyRichCommand('hiliteColor','#fff2a8'); $('#rtHighlightBlue').onclick=()=>applyRichCommand('hiliteColor','#cdeeff'); $('#rtHighlightGreen').onclick=()=>applyRichCommand('hiliteColor','#ddf4c7'); $('#rtBlack').onclick=()=>applyRichCommand('foreColor','#111111'); $('#rtPink').onclick=()=>applyRichCommand('foreColor','#c2185b'); $('#rtGray').onclick=()=>applyRichCommand('foreColor','#737373'); $('#rtClear').onclick=()=>applyRichCommand('removeFormat');
@@ -2284,6 +2342,20 @@ function bind(){
   $('#sidebarBackdrop').onclick = closeCategorySidebar;
   $('#categoryEdgeToggle').onclick = toggleCategorySidebar;
   restoreCategorySidebarState();
+  document.addEventListener('selectionchange',()=>{
+    const sel=window.getSelection();
+    if(!sel||sel.rangeCount===0)return;
+    let node=sel.anchorNode;
+    if(node?.nodeType===Node.TEXT_NODE)node=node.parentElement;
+    if(node?.closest?.('.editable[contenteditable="true"]'))captureRichSelection();
+  });
+  document.addEventListener('pointerup',e=>{
+    if(e.target.closest?.('.editable[contenteditable="true"]'))captureRichSelection();
+  });
+  document.addEventListener('keyup',e=>{
+    if(e.target.closest?.('.editable[contenteditable="true"]'))captureRichSelection();
+  });
+
   $('#saveCategoryBtn').onclick = saveCategory;
   $('#saveMainCategoryBtn').onclick = saveMainCategory;
   $('#closeMainCategoryBtn').onclick = () => { $('#mainCategoryModal').classList.remove('open'); mainCategoryEditName=null; };
@@ -2400,7 +2472,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.7.4 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.5 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

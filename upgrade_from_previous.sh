@@ -2,9 +2,9 @@
 set -euo pipefail
 ROOT="/mnt/e/google_drive/02_CODING/CODING/Studynurse"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION="0.7.4"
+VERSION="0.7.5"
 PREV=""
-for x in "$ROOT/StudyNurse-v0.7.3" "$ROOT/StudyNurse-v0.7.2" "$ROOT/StudyNurse-v0.7.1"; do
+for x in "$ROOT/StudyNurse-v0.7.4" "$ROOT/StudyNurse-v0.7.3" "$ROOT/StudyNurse-v0.7.2"; do
   [[ -d "$x/.git" ]] && { PREV="$x"; break; }
 done
 [[ -n "$PREV" ]] || { echo "[ERROR] 이전 Git 저장소를 $ROOT 아래에서 찾지 못했습니다."; exit 1; }

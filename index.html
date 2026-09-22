@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fdf8f4">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="StudyNurse">
-<title>StudyNurse v0.7.0</title>
+<title>StudyNurse v0.7.1</title>
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="stylesheet" href="./app.css">
 </head>
@@ -14,12 +14,13 @@
 <div class="app" id="app">
   <div class="topbar">
     <div class="brandrow">
-      <div class="brand">StudyNurse <small id="appVersion">v0.7.0</small></div>
+      <div class="brand">StudyNurse <small id="appVersion">v0.7.1</small></div>
       <span class="modebadge" id="modeBadge">VIEW</span>
       <span class="envbadge" id="envBadge">PROD</span>
       <span class="spacer"></span>
       <div class="top-actions" id="topActions">
-        <button class="btn btn-soft" id="diagBtn">진단</button><button class="btn btn-soft" id="quizBtn">🎯 퀴즈</button><button class="btn btn-soft" id="editBtn">편집</button>
+        <button class="btn btn-soft mobile-category-btn" id="mobileCategoryBtn">☰ 카테고리</button>
+      <button class="btn btn-soft" id="diagBtn">진단</button><button class="btn btn-soft" id="quizBtn">🎯 퀴즈</button><button class="btn btn-soft" id="editBtn">편집</button>
         <button class="btn btn-soft" id="autoCardBtn" hidden>⚡ 자동정리</button>
         <button class="btn btn-primary" id="saveBtn" hidden>저장</button>
       </div>
@@ -45,10 +46,10 @@
     </div>
   </div>
   <div class="navbox">
-    <div class="tabs" id="tabs"></div>
+    <div class="workspace-layout"><aside class="category-sidebar" id="categorySidebar"><div class="category-sidebar-head"><strong>학습 카테고리</strong><button class="sidebar-close" id="closeCategorySidebarBtn" type="button">✕</button></div><div id="categoryTree"></div></aside><div class="workspace-main"><div class="tabs legacy-tabs" id="tabs"></div>
   </div>
 
-  <div id="content"></div>
+  <div id="content"></div></div></div><div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 </div>
 
 <button class="fab" id="addCardBtn" title="새 카드">＋</button>

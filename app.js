@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.7.1';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -194,6 +194,8 @@ function migrateState(input){
     });
   });
 
+  if(!Array.isArray(data.mainCategoryOrder))data.mainCategoryOrder=[];
+  if(!data.mainCategoryCollapsed||typeof data.mainCategoryCollapsed!=='object')data.mainCategoryCollapsed={};
   data.version = APP_VERSION;
   return data;
 }
@@ -745,12 +747,22 @@ function currentCardIdFromToggle(btn){
 }
 
 function mainCategoryName(cat){return String(cat?.mainLabel||cat?.main||'Adult').trim()||'Adult';}
-function mainCategoryNames(){const seen=new Set(),out=[];(state.categories||[]).forEach(c=>{const n=mainCategoryName(c);if(!seen.has(n)){seen.add(n);out.push(n);}});return out;}
+function mainCategoryNames(){const seen=new Set(),found=[];(state.categories||[]).forEach(c=>{const n=mainCategoryName(c);if(!seen.has(n)){seen.add(n);found.push(n);}});const saved=(Array.isArray(state.mainCategoryOrder)?state.mainCategoryOrder:[]).filter(n=>seen.has(n));found.forEach(n=>{if(!saved.includes(n))saved.push(n);});state.mainCategoryOrder=saved;return saved;}
 function categoriesForMain(n){return (state.categories||[]).filter(c=>mainCategoryName(c)===n).sort((a,b)=>(a.order??0)-(b.order??0));}
 function ensureSelectedMain(){const c=catById(selectedCategory);if(c)selectedMainCategory=mainCategoryName(c);const ns=mainCategoryNames();if(!selectedMainCategory||!ns.includes(selectedMainCategory))selectedMainCategory=ns[0]||'Adult';return selectedMainCategory;}
 
+function normalizeSubOrders(main){categoriesForMain(main).forEach((c,i)=>c.order=i);}
+function moveMainCategory(source,target,before=true){if(!source||!target||source===target)return;const arr=mainCategoryNames().filter(n=>n!==source);let i=arr.indexOf(target);if(i<0)i=arr.length;if(!before)i++;arr.splice(i,0,source);state.mainCategoryOrder=arr;markDirty();render();}
+function moveSubCategory(id,targetMain,targetId=null,before=true){const c=catById(id);if(!c)return;const old=mainCategoryName(c),list=categoriesForMain(targetMain).filter(x=>x.id!==id);let i=list.length;if(targetId){const x=list.findIndex(v=>v.id===targetId);if(x>=0)i=x+(before?0:1);}c.main=targetMain;c.mainLabel=targetMain;list.splice(i,0,c);list.forEach((v,n)=>v.order=n);if(old!==targetMain)normalizeSubOrders(old);selectedMainCategory=targetMain;selectedCategory=id;markDirty();render();}
+function toggleMainCollapsed(n){state.mainCategoryCollapsed=state.mainCategoryCollapsed||{};state.mainCategoryCollapsed[n]=!state.mainCategoryCollapsed[n];render();}
+function openCategorySidebar(){$('#categorySidebar')?.classList.add('open');$('#sidebarBackdrop')?.classList.add('open');}
+function closeCategorySidebar(){$('#categorySidebar')?.classList.remove('open');$('#sidebarBackdrop')?.classList.remove('open');}
+function renderCategoryTree(){const root=$('#categoryTree');if(!root)return;root.innerHTML=mainCategoryNames().map(m=>{const closed=!!state.mainCategoryCollapsed?.[m],subs=categoriesForMain(m);return `<div class="category-tree-main" data-tree-main="${esc(m)}"><div class="category-tree-main-row">${editing?`<button class="tree-drag" draggable="true" data-main-drag="${esc(m)}">⋮⋮</button>`:''}<button class="tree-toggle" data-main-toggle="${esc(m)}">${closed?'▸':'▾'}</button><span class="category-tree-main-name" data-main-select="${esc(m)}">${esc(m)}</span></div><div class="tree-sub-list" ${closed?'hidden':''}>${subs.map(c=>`<div class="tree-sub-row ${c.id===selectedCategory?'active':''}" data-tree-sub="${esc(c.id)}" data-parent-main="${esc(m)}">${editing?`<button class="tree-sub-drag" draggable="true" data-sub-drag="${esc(c.id)}">⋮⋮</button>`:''}<span class="tree-sub-name" data-sub-select="${esc(c.id)}">${esc(c.subLabel||c.title)}</span></div>`).join('')}${editing?`<button class="tree-add-sub" data-add-sub-main="${esc(m)}">＋ 소카테고리</button>`:''}</div></div>`;}).join('')+(editing?'<button class="tree-add-main" id="treeAddMainBtn">＋ 대카테고리</button>':'');root.querySelectorAll('[data-main-toggle]').forEach(b=>b.onclick=()=>toggleMainCollapsed(b.dataset.mainToggle));root.querySelectorAll('[data-main-select]').forEach(b=>b.onclick=()=>{selectedMainCategory=b.dataset.mainSelect;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-sub-select]').forEach(b=>b.onclick=()=>{const c=catById(b.dataset.subSelect);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();if(matchMedia('(max-width:900px)').matches)closeCategorySidebar();});root.querySelectorAll('[data-add-sub-main]').forEach(b=>b.onclick=()=>openCategoryModal(null,b.dataset.addSubMain));if($('#treeAddMainBtn'))$('#treeAddMainBtn').onclick=()=>openMainCategoryModal();initTreeDnD();}
+function initTreeDnD(){if(!editing)return;let drag=null;document.querySelectorAll('[data-main-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'main',name:el.dataset.mainDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-sub-drag]').forEach(el=>el.ondragstart=e=>{drag={type:'sub',id:el.dataset.subDrag};e.dataTransfer.effectAllowed='move';});document.querySelectorAll('[data-tree-main]').forEach(box=>{box.ondragover=e=>{if(!drag)return;e.preventDefault();box.classList.add('drag-over');};box.ondragleave=()=>box.classList.remove('drag-over');box.ondrop=e=>{e.preventDefault();box.classList.remove('drag-over');if(!drag)return;const t=box.dataset.treeMain;if(drag.type==='main'){const r=box.getBoundingClientRect();moveMainCategory(drag.name,t,e.clientY<r.top+r.height/2);}else moveSubCategory(drag.id,t);drag=null;};});document.querySelectorAll('[data-tree-sub]').forEach(row=>{row.ondragover=e=>{if(!drag||drag.type!=='sub')return;e.preventDefault();e.stopPropagation();row.classList.add('drag-over');};row.ondragleave=()=>row.classList.remove('drag-over');row.ondrop=e=>{e.preventDefault();e.stopPropagation();row.classList.remove('drag-over');if(!drag||drag.type!=='sub')return;const r=row.getBoundingClientRect();moveSubCategory(drag.id,row.dataset.parentMain,row.dataset.treeSub,e.clientY<r.top+r.height/2);drag=null;};});}
+
 function render(){
  const q=$('#searchInput').value.trim().toLowerCase(),main=ensureSelectedMain(),mains=mainCategoryNames(),subs=categoriesForMain(main);
+ renderCategoryTree();
  $('#tabs').innerHTML=`<div class="main-category-bar">${mains.map(n=>`<button class="main-tab ${n===main?'active':''}" type="button" data-main-category="${esc(n)}">${esc(n)}</button>`).join('')}${editing?`<button class="main-tab main-tab-add" id="addMainCategoryBtn">＋ 대</button><span class="main-category-tools"><button class="btn btn-soft" id="renameMainCategoryBtn">대 수정</button><button class="btn btn-danger" id="deleteMainCategoryBtn">대 삭제</button></span>`:''}</div><div class="sub-category-row"><span class="sub-category-label">${esc(main)} &gt;</span>${subs.map(c=>`<button class="tab ${c.id===selectedCategory?'active':''}" type="button" data-cat="${esc(c.id)}" data-category-id="${esc(c.id)}">${editing?`<span class="category-drag-handle" data-cat-drag="${esc(c.id)}">⋮⋮</span>`:''}<span>${esc(c.subLabel||c.title)}</span></button>`).join('')}${editing?`<button class="tab tab-add" id="addCategoryBtn">＋ 소</button>`:''}</div>`;
  $('#tabs').querySelectorAll('[data-main-category]').forEach(b=>b.onclick=()=>{collectEditable();selectedMainCategory=b.dataset.mainCategory;selectedCategory=categoriesForMain(selectedMainCategory)[0]?.id||null;render();});
  $('#tabs').querySelectorAll('[data-cat]').forEach(b=>b.onclick=e=>{if(e.target.closest('[data-cat-drag]'))return;collectEditable();const c=catById(b.dataset.cat);if(!c)return;selectedCategory=c.id;selectedMainCategory=mainCategoryName(c);render();});
@@ -1060,13 +1072,13 @@ function openMainCategoryModal(name=null){
 }
 function saveMainCategory(){
  const name=$('#mainCategoryName').value.trim();if(!name)return alert('대카테고리 이름을 입력하세요.');const names=mainCategoryNames();
- if(mainCategoryEditName){if(name!==mainCategoryEditName&&names.includes(name))return alert('같은 이름의 대카테고리가 이미 있습니다.');state.categories.forEach(c=>{if(mainCategoryName(c)===mainCategoryEditName){c.main=name;c.mainLabel=name;}});}
+ if(mainCategoryEditName){if(name!==mainCategoryEditName&&names.includes(name))return alert('같은 이름의 대카테고리가 이미 있습니다.');state.categories.forEach(c=>{if(mainCategoryName(c)===mainCategoryEditName){c.main=name;c.mainLabel=name;}});state.mainCategoryOrder=(state.mainCategoryOrder||[]).map(n=>n===mainCategoryEditName?name:n);}
  else{if(names.includes(name))return alert('같은 이름의 대카테고리가 이미 있습니다.');const base=slugify(`${name}-new-section`)||'section';let id=`custom-${base}`,n=2;while(catById(id))id=`custom-${base}-${n++}`;state.categories.push({id,main:name,mainLabel:name,sub:id,subLabel:'새 소카테고리',title:'새 소카테고리',subtitle:'',order:state.categories.length,cards:[]});selectedCategory=id;}
  selectedMainCategory=name;$('#mainCategoryModal').classList.remove('open');mainCategoryEditName=null;markDirty();render();
 }
 function deleteMainCategory(name){
  const cs=categoriesForMain(name),cnt=cs.reduce((n,c)=>n+(c.cards?.length||0),0);if(!confirm(`"${name}" 대카테고리와 소카테고리 ${cs.length}개, 카드 ${cnt}개를 모두 삭제하시겠습니까?`))return;
- const ids=new Set(cs.map(c=>c.id));state.categories=state.categories.filter(c=>!ids.has(c.id));selectedMainCategory=mainCategoryNames()[0]||null;selectedCategory=selectedMainCategory?categoriesForMain(selectedMainCategory)[0]?.id||null:null;markDirty();render();
+ const ids=new Set(cs.map(c=>c.id));state.categories=state.categories.filter(c=>!ids.has(c.id));state.mainCategoryOrder=(state.mainCategoryOrder||[]).filter(n=>n!==name);selectedMainCategory=mainCategoryNames()[0]||null;selectedCategory=selectedMainCategory?categoriesForMain(selectedMainCategory)[0]?.id||null:null;markDirty();render();
 }
 
 function deleteCategory(id){
@@ -2108,6 +2120,9 @@ function bind(){
     $('#categoryModal').classList.remove('open');
     categoryEditId = null;
   };
+  $('#mobileCategoryBtn').onclick = openCategorySidebar;
+  $('#closeCategorySidebarBtn').onclick = closeCategorySidebar;
+  $('#sidebarBackdrop').onclick = closeCategorySidebar;
   $('#saveCategoryBtn').onclick = saveCategory;
   $('#saveMainCategoryBtn').onclick = saveMainCategory;
   $('#closeMainCategoryBtn').onclick = () => { $('#mainCategoryModal').classList.remove('open'); mainCategoryEditName=null; };
@@ -2224,7 +2239,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.7.0 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.1 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

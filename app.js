@@ -1,5 +1,5 @@
 
-const APP_VERSION = '0.7.3';
+const APP_VERSION = '0.7.4';
 
 const PROD_CFG = window.STUDYNURSE_CONFIG || {};
 const DEV_CFG = window.STUDYNURSE_DEV_CONFIG || {};
@@ -1629,7 +1629,68 @@ function showRichToolbar(){if(editing)$('#richToolbar').hidden=false;}
 function hideRichToolbar(){$('#richToolbar').hidden=true;}
 function updateRichToolbarContext(){if(!editing){hideRichToolbar();return;}const s=window.getSelection(),n=s?.rangeCount?s.anchorNode:null,e=n?.nodeType===1?n:n?.parentElement;if(isRichEditable(document.activeElement)||isRichEditable(e)){rememberRichSelection();showRichToolbar();}else hideRichToolbar();}
 function restoreRichSelection(){if(!lastRichRange)return;const s=window.getSelection();s.removeAllRanges();s.addRange(lastRichRange);}
-function applyRichCommand(cmd,value=null){if(!editing||!lastRichRange)return;restoreRichSelection();document.execCommand(cmd,false,value);rememberRichSelection();markDirty();showRichToolbar();}
+
+let richToastTimer=null;
+function richCommandLabel(cmd,value){
+  if(cmd==='bold')return '굵게 적용';
+  if(cmd==='underline')return '밑줄 적용';
+  if(cmd==='removeFormat')return '서식 제거';
+  const v=String(value||'').toLowerCase();
+  if(cmd==='hiliteColor'){
+    if(v==='#fff2a8')return '노랑 형광펜 적용';
+    if(v==='#cdeeff')return '하늘 형광펜 적용';
+    if(v==='#ddf4c7')return '연두 형광펜 적용';
+    return '형광펜 적용';
+  }
+  if(cmd==='foreColor'){
+    if(v==='#111111')return '검정 글자 적용';
+    if(v==='#c2185b')return '핑크 글자 적용';
+    if(v==='#737373')return '회색 글자 적용';
+    return '글자색 적용';
+  }
+  return '서식 적용';
+}
+function showRichFormatFeedback(cmd,value){
+  const toast=$('#richFormatToast');
+  if(toast){
+    toast.textContent=richCommandLabel(cmd,value);
+    toast.classList.add('show');
+    clearTimeout(richToastTimer);
+    richToastTimer=setTimeout(()=>toast.classList.remove('show'),900);
+  }
+  const map={
+    bold:'rtBold',underline:'rtUnderline',removeFormat:'rtClear',
+    '#fff2a8':'rtHighlight','#cdeeff':'rtHighlightBlue','#ddf4c7':'rtHighlightGreen',
+    '#111111':'rtBlack','#c2185b':'rtPink','#737373':'rtGray'
+  };
+  const id=map[cmd]||map[String(value||'').toLowerCase()];
+  const b=id?$('#'+id):null;
+  if(b){
+    b.classList.add('rt-applied');
+    setTimeout(()=>b.classList.remove('rt-applied'),650);
+  }
+}
+
+function applyRichCommand(cmd,value=null){
+  const el=lastEditable;
+  if(!el)return;
+
+  el.focus();
+  restoreSelection();
+
+  try{
+    if(value==null)document.execCommand(cmd,false,null);
+    else document.execCommand(cmd,false,value);
+  }catch(e){
+    console.warn('Rich command failed',cmd,value,e);
+    return;
+  }
+
+  saveSelection();
+  normalizeEmptyEditable(el);
+  markDirty();
+  showRichFormatFeedback(cmd,value);
+}
 
 function normalizeAutoLine(line){
   return String(line || '').replace(/\uFE0F/g, '').trim();
@@ -2339,7 +2400,7 @@ window.addEventListener('beforeunload' , e => {
 });
 
 document.addEventListener('visibilitychange', () => {
-  // v0.7.3 intentionally does NOT auto-save on background/visibility changes.
+  // v0.7.4 intentionally does NOT auto-save on background/visibility changes.
 });
 
 init();

@@ -1,16 +1,14 @@
-# StudyNurse v0.7.3
+# StudyNurse v0.7.4
 
 Development roots:
 - Windows: `E:\google_drive\02_CODING\CODING\Studynurse`
 - WSL: `/mnt/e/google_drive/02_CODING/CODING/Studynurse`
 
-## Navigation
-- PC/mobile use the same left edge drawer.
-- Folded: a persistent `>` button is visible at the left edge.
-- Expanded: the button becomes `<` and the category tree slides in.
-- Desktop remembers open/closed state in localStorage.
-- Mobile starts folded and closes automatically after a category selection.
-- The drawer overlays the page instead of permanently covering or resizing study content.
-- Existing parent/child DND and cross-parent DND are retained.
-
-v0.7.2 safe legacy category repair and all existing quiz/rich-text features are retained.
+Changes:
+- Rich-text selection overlay is translucent so highlight/font color remains visible while selected.
+- Rich-format toolbar button flashes after application.
+- Short on-screen confirmation: `굵게 적용`, `하늘 형광펜 적용`, etc.
+- v0.7.3 edge drawer retained.
+- `upgrade_from_previous.sh` prints Supabase SQL and copies it to Windows clipboard with `clip.exe`.
+- HTTPS StudyNurse origin is automatically switched to SSH.
+- `deploy.sh` performs fetch/add/commit/rebase/push and stops safely on conflicts.
